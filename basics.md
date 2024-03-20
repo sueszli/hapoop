@@ -3,18 +3,23 @@
 - NameNode: stores all metadata and block locations in memory
 - DataNodes: stores and fetches blocks for client or nameNode
 
-writing into a hdfs file
+jobs (jar files) without YARN (yet another resource negotiator):
 
-```bash
-hadoop fs –put /temp/test hdfs://foo.com:9000/bar/test
+- master node: JobTracker
+- worker node: TaskTracker, storage of intermediate data
+
+# mapreduce pattern
+
+pseudo code:
+
 ```
-
-# mapreduce
-
-```python
 def map(docid a, doc d):
     for each word w in doc d:
-        emitIntermediate(w, 1)
+        emit_intermediate(w, 1)
+
+def combine(word w, list<count> counts):
+    # do more local processing before passing to reduce
+    ...
 
 def reduce(word w, list<count> counts):
     int result = 0
@@ -36,7 +41,14 @@ mapreduce flow:
      - `[(k, [v])] -> [(k', v')]`
      - process one key and its list of values at a time, return a list of key-value pairs
 
-jobs (jar files) without YARN (yet another resource negotiator):
+# ir information retrieval
 
-- master node: JobTracker
-- worker node: TaskTracker, storage of intermediate data
+preprocessing:
+
+- tokenization: take corpus (collection of documents) and break them into a set of tokens (bag of words). we don't care about the order of the tokens, just their presence.
+- stopping: remove common and irrelevant words (stop words) from the tokens.
+- case folding: convert all tokens to lowercase.
+
+representation:
+
+- vector space model VSM: add weight to each token in the bag of words (ie. term frequency-inverse document frequency TF-IDF).
