@@ -9,5 +9,6 @@ echo "hadoop version: $HADOOP_VERSION"
 echo "hadoop jar path: $JAR_PATH"
 hadoop jar $JAR_PATH grep input output 'dfs[a-z.]+'
 
-echo -e "\n\n\n\n\n\n\n\n\n\n\n\n"
+echo -e "\n\n\n\n"
+echo "final output:"
 cat output/*
