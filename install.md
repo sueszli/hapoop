@@ -17,15 +17,13 @@ echo $JAVA_HOME
 code /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/hadoop-env.sh # add JAVA_HOME to `export JAVA_HOME=` line
 ```
 
-# setup: standalone mode
-
-default mode after hadoop is installed. single node cluster, emulated by a single java process. see demo subdirectory in this repo for details.
-
 # setup: pseudo-distributed mode
 
-single node cluster, but each hadoop daemon runs in a separate java process. see website for details.
+by default hadoop is set up to be in the "standalone" mode: single node cluster, emulated by a single java process.
 
-# configure
+but we want to set up hadoop in the "pseudo-distributed" mode: single node cluster, but each hadoop daemon runs in a separate java process. see website for details.
+
+_configure_
 
 update the xml files:
 
@@ -71,7 +69,7 @@ code /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/yarn-site.xml
 # </configuration>
 ```
 
-enable passphraseless ssh:
+_enable passphraseless ssh:_
 
 ```bash
 sudo systemsetup -setremotelogin on
@@ -87,7 +85,7 @@ ssh localhost # check if works
 exit # kill session
 ```
 
-## test run
+_test run_
 
 ```bash
 # ----------------------------------- reset
