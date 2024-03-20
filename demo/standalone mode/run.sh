@@ -1,4 +1,3 @@
-# check if running on mac
 if [[ "$OSTYPE" != "darwin"* ]]; then echo "this script is for macos only"; exit 1; fi
 if ! command -v hadoop > /dev/null; then echo "hadoop command not found"; exit 1; fi 
 

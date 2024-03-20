@@ -87,7 +87,7 @@ ssh localhost # check if works
 exit # kill session
 ```
 
-## run
+## test run
 
 ```bash
 # ----------------------------------- reset
@@ -124,8 +124,6 @@ hadoop jar /opt/homebrew/Cellar/hadoop/3.3.6/libexec/share/hadoop/mapreduce/hado
 hdfs dfs -get output ./tmp
 cat ./tmp/*
 rm -rf ./tmp
-
-# 2024-03-20 13:51:57,223 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
 
 # ----------------------------------- monitor
 open http://localhost:9870/explorer.html#/
