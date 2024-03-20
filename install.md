@@ -2,62 +2,136 @@ docs: https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/Si
 
 tutorial: https://www.youtube.com/watch?v=H999fIuymqc
 
-## install binary
+# install binary
 
+- install sdkman through https://sdkman.io/ to manage java version 11
 - install java 11 (system breaks with latest java based on my experience)
-     - i recommend using "sdk man" to install and manage your java versions (https://sdkman.io/)
-- `brew install pdsh` (parallel distributed shell)
-- `brew install hadoop`
-- update `hadoop-env.sh`: `code /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/hadoop-env.sh` (hint: call `echo $JAVA_HOME` to find out the path)
-- run `hadoop version` to check if it's installed
 
-## setup: standalone mode
+```bash
+brew install pdsh
+brew install hadoop
+hadoop version
 
-default mode after hadoop is installed.
+sdk current # must be java 11
+echo $JAVA_HOME
+code /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/hadoop-env.sh # add JAVA_HOME to `export JAVA_HOME=` line
+```
 
-single node cluster, emulated by a single java process.
+# setup: standalone mode
 
-## setup: pseudo-distributed mode
+default mode after hadoop is installed. single node cluster, emulated by a single java process. see demo subdirectory in this repo for details.
 
-single node cluster, but each hadoop daemon runs in a separate java process.
+# setup: pseudo-distributed mode
 
-see website for details.
+single node cluster, but each hadoop daemon runs in a separate java process. see website for details.
 
-**configuration:**
+# configure
 
-- update `core-site.xml`: `code /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/core-site.xml`
-- update `hdfs-site.xml`: `code /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/hdfs-site.xml`
+update the xml files:
 
-**passphraseless ssh:**
+```bash
+code /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/core-site.xml
+# <configuration>
+#     <property>
+#         <name>fs.defaultFS</name>
+#         <value>hdfs://localhost:9000</value>
+#     </property>
+# </configuration>
 
-- enable remote login: `sudo systemsetup -setremotelogin on`
-- generate ssh keys:
+code /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/hdfs-site.xml
+# <configuration>
+#     <property>
+#         <name>dfs.replication</name>
+#         <value>1</value>
+#     </property>
+# </configuration>
 
-     - `rm -rf ~/.ssh/id_rsa.pub`
-     - `cat ~/.ssh/id_rsa.pub`
-     - `ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa`
-     - `cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys`
-     - `chmod 0600 ~/.ssh/authorized_keys`
-     - test if it works:`ssh localhost` → don't forget to `exit`
+code /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/mapred-site.xml
+# <configuration>
+#     <property>
+#         <name>mapreduce.framework.name</name>
+#         <value>yarn</value>
+#     </property>
+#     <property>
+#         <name>mapreduce.application.classpath</name>
+#         <value>$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*:$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*</value>
+#     </property>
+# </configuration>
 
-**execution:**
+code /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/yarn-site.xml
+# <configuration>
+#     <property>
+#         <name>yarn.nodemanager.aux-services</name>
+#         <value>mapreduce_shuffle</value>
+#     </property>
+#     <property>
+#         <name>yarn.nodemanager.env-whitelist</name>
+#         <value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,CLASSPATH_PREPEND_DISTCACHE,HADOOP_YARN_HOME,HADOOP_HOME,PATH,LANG,TZ,HADOOP_MAPRED_HOME</value>
+#     </property>
+# </configuration>
+```
 
-- `hdfs namenode -format`
-- `/opt/homebrew/Cellar/hadoop/3.3.6/libexec/sbin/start-dfs.sh`
-- check out: http://localhost:9870/explorer.html#/
+enable passphraseless ssh:
 
-     - `hdfs dfs -mkdir -p /user/sueszli`
-     - then the new user should show up in the web interface
+```bash
+sudo systemsetup -setremotelogin on
 
-- `hdfs dfs -mkdir input`
-- `hdfs dfs -put /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/*.xml input`
-- `hadoop jar /opt/homebrew/Cellar/hadoop/3.3.6/libexec/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.3.6.jar grep input output 'dfs[a-z.]+'`
+rm -rf ~/.ssh/id_rsa.pub
+code ~/.ssh/authorized_keys
 
-- update `mapred-site.xml`: `code /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/mapred-site.xml`
-- update `yarn-site.xml`: `code /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/yarn-site.xml`
+ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa # don't rename the file
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+chmod 0600 ~/.ssh/authorized_keys
 
----
+ssh localhost # check if works
+exit # kill session
+```
 
-- format the hdfs: `hdfs namenode -format`
-- start: `/opt/homebrew/Cellar/hadoop/3.3.6/libexec/sbin/start-all.sh`
-- start: `/opt/homebrew/Cellar/hadoop/3.3.6/libexec/sbin/start-yarn.sh`
+## run
+
+```bash
+# ----------------------------------- reset
+jps | grep " NameNode" | awk '{print $1}' | xargs kill -9
+jps | grep " SecondaryNameNode" | awk '{print $1}' | xargs kill -9
+jps
+
+rm -rf /tmp/hadoop
+rm -rf /tmp/hadoop-sueszli
+rm -rf /tmp/hadoop-yarn-sueszli
+
+hdfs namenode -format
+
+/opt/homebrew/Cellar/hadoop/3.3.6/libexec/sbin/stop-yarn.sh
+/opt/homebrew/Cellar/hadoop/3.3.6/libexec/sbin/stop-dfs.sh
+
+# ----------------------------------- start
+/opt/homebrew/Cellar/hadoop/3.3.6/libexec/sbin/start-dfs.sh
+/opt/homebrew/Cellar/hadoop/3.3.6/libexec/sbin/start-yarn.sh
+
+# import data
+hdfs dfs -mkdir -p /user/sueszli
+hdfs dfs -mkdir input
+hdfs dfs -put /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/*.xml input
+
+hdfs dfs -df -h
+hdfs dfs -ls /user/sueszli
+hdfs dfs -ls /user/sueszli/input
+
+# run mapreduce
+hadoop jar /opt/homebrew/Cellar/hadoop/3.3.6/libexec/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.3.6.jar grep input output 'dfs[a-z.]+'
+
+# print output
+hdfs dfs -get output ./tmp
+cat ./tmp/*
+rm -rf ./tmp
+
+# 2024-03-20 13:51:57,223 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+
+# ----------------------------------- monitor
+open http://localhost:9870/explorer.html#/
+open http://localhost:8088/
+
+# ----------------------------------- stop
+/opt/homebrew/Cellar/hadoop/3.3.6/libexec/sbin/stop-dfs.sh
+/opt/homebrew/Cellar/hadoop/3.3.6/libexec/sbin/stop-yarn.sh
+```
