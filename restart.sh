@@ -44,3 +44,6 @@ open http://localhost:9870/explorer.html#/user/${USERNAME}
 # open http:/localhost:9864/
 # open http:/localhost:8042/node
 # open http:/localhost:8088/
+
+# use cli
+# see: https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/FileSystemShell.html
