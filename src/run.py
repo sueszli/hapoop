@@ -14,9 +14,9 @@ from mrjob.job import MRJob
 # $ python3.11 ./src/run.py ./data/reviews_devset.json --stopwords ./data/stopwords.txt
 
 
-class PreprocessJob(MRJob):
+class ChiSquareJob(MRJob):
     def configure_args(self):
-        super(PreprocessJob, self).configure_args()
+        super(ChiSquareJob, self).configure_args()
         self.add_file_arg("--stopwords", help="path to stopwords file")
 
     def mapper(self, _, line):
@@ -35,12 +35,13 @@ class PreprocessJob(MRJob):
         yield None, list(filtered_tokens)
 
     def reducer(self, _, tokens):
-        # just pass through, as we're not reducing in this step
+        # WORK IN PROGRESS
         yield None, list(tokens)
 
     def steps(self):
+        # WORK IN PROGRESS
         return [MRStep(mapper=self.mapper, reducer=self.reducer)]
 
 
 if __name__ == "__main__":
-    PreprocessJob.run()
+    ChiSquareJob.run()
