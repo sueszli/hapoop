@@ -4,8 +4,8 @@ tutorial: https://www.youtube.com/watch?v=H999fIuymqc
 
 # install binary
 
-- install sdkman through https://sdkman.io/ to manage java version 11
-- install java 11 (system breaks with latest java based on my experience)
+-   install sdkman through https://sdkman.io/ to manage java version 11
+-   install java 11 (system breaks with latest java based on my experience)
 
 ```bash
 brew install pdsh
