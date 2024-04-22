@@ -1,4 +1,5 @@
-> warning: current build scripts are only for macos
+_using hadoop_
 
-1. install hadoop following the instructions in the `install.md` file
-2. start hadoop by running the `restart.sh` script
+-   install: follow instructions in `install.md`
+-   start / restart: run `restart.sh`
+-   use the cli: https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/FileSystemShell.html

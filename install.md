@@ -2,6 +2,8 @@ docs: https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/Si
 
 tutorial: https://www.youtube.com/watch?v=H999fIuymqc
 
+this install guide is exclusively for macos
+
 # install binary
 
 -   install sdkman through https://sdkman.io/ to manage java version 11
@@ -12,9 +14,14 @@ brew install pdsh
 brew install hadoop
 hadoop version
 
+sdk install java 11
+sdk list java
+sdk install 11.0.21-amzn
+sdk use java 11.0.21-amzn
 sdk current # must be java 11
+
 echo $JAVA_HOME
-code /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/hadoop-env.sh # add JAVA_HOME to `export JAVA_HOME=` line
+code /opt/homebrew/Cellar/hadoop/3.4.0/libexec/etc/hadoop/hadoop-env.sh # uncomment JAVA_HOME line and set to `export JAVA_HOME=${JAVA_HOME}`
 ```
 
 # setup: pseudo-distributed mode
@@ -28,7 +35,8 @@ _configure_
 update the xml files:
 
 ```bash
-code /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/core-site.xml
+code /opt/homebrew/Cellar/hadoop/3.4.0/libexec/etc/hadoop/core-site.xml
+# also: set port number to 9000 (default is 8020) -> `sudo lsof -i -P -n | grep LISTEN`
 # <configuration>
 #     <property>
 #         <name>fs.defaultFS</name>
@@ -36,7 +44,7 @@ code /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/core-site.xml
 #     </property>
 # </configuration>
 
-code /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/hdfs-site.xml
+code /opt/homebrew/Cellar/hadoop/3.4.0/libexec/etc/hadoop/hdfs-site.xml
 # <configuration>
 #     <property>
 #         <name>dfs.replication</name>
@@ -44,7 +52,7 @@ code /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/hdfs-site.xml
 #     </property>
 # </configuration>
 
-code /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/mapred-site.xml
+code /opt/homebrew/Cellar/hadoop/3.4.0/libexec/etc/hadoop/mapred-site.xml
 # <configuration>
 #     <property>
 #         <name>mapreduce.framework.name</name>
@@ -56,7 +64,7 @@ code /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/mapred-site.xml
 #     </property>
 # </configuration>
 
-code /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/yarn-site.xml
+code /opt/homebrew/Cellar/hadoop/3.4.0/libexec/etc/hadoop/yarn-site.xml
 # <configuration>
 #     <property>
 #         <name>yarn.nodemanager.aux-services</name>
@@ -99,24 +107,24 @@ rm -rf /tmp/hadoop-yarn-sueszli
 
 hdfs namenode -format
 
-/opt/homebrew/Cellar/hadoop/3.3.6/libexec/sbin/stop-yarn.sh
-/opt/homebrew/Cellar/hadoop/3.3.6/libexec/sbin/stop-dfs.sh
+/opt/homebrew/Cellar/hadoop/3.4.0/libexec/sbin/stop-yarn.sh
+/opt/homebrew/Cellar/hadoop/3.4.0/libexec/sbin/stop-dfs.sh
 
 # ----------------------------------- start
-/opt/homebrew/Cellar/hadoop/3.3.6/libexec/sbin/start-dfs.sh
-/opt/homebrew/Cellar/hadoop/3.3.6/libexec/sbin/start-yarn.sh
+/opt/homebrew/Cellar/hadoop/3.4.0/libexec/sbin/start-dfs.sh
+/opt/homebrew/Cellar/hadoop/3.4.0/libexec/sbin/start-yarn.sh
 
 # import data
 hdfs dfs -mkdir -p /user/sueszli
 hdfs dfs -mkdir input
-hdfs dfs -put /opt/homebrew/Cellar/hadoop/3.3.6/libexec/etc/hadoop/*.xml input
+hdfs dfs -put /opt/homebrew/Cellar/hadoop/3.4.0/libexec/etc/hadoop/*.xml input
 
 hdfs dfs -df -h
 hdfs dfs -ls /user/sueszli
 hdfs dfs -ls /user/sueszli/input
 
 # run mapreduce
-hadoop jar /opt/homebrew/Cellar/hadoop/3.3.6/libexec/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.3.6.jar grep input output 'dfs[a-z.]+'
+hadoop jar /opt/homebrew/Cellar/hadoop/3.4.0/libexec/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.4.0.jar grep input output 'dfs[a-z.]+'
 
 # print output
 hdfs dfs -get output ./tmp
@@ -128,6 +136,6 @@ open http://localhost:9870/explorer.html#/
 open http://localhost:8088/
 
 # ----------------------------------- stop
-/opt/homebrew/Cellar/hadoop/3.3.6/libexec/sbin/stop-dfs.sh
-/opt/homebrew/Cellar/hadoop/3.3.6/libexec/sbin/stop-yarn.sh
+/opt/homebrew/Cellar/hadoop/3.4.0/libexec/sbin/stop-dfs.sh
+/opt/homebrew/Cellar/hadoop/3.4.0/libexec/sbin/stop-yarn.sh
 ```
