@@ -21,7 +21,7 @@ class PreprocessJob(MRJob):
 
     def mapper(self, _, line):
         # tokenizing
-        tokens = re.split(r'[ \t\d()\[\]{}.!?,;:+=-_"\'~#@&*%€$§\/]+', line)
+        tokens = re.split(r'[ \t\d()\[\]{}.!?,;:+=\-_"\'~#@&*%€$§\/]+', line)
 
         # case folding
         tokens = [token.lower() for token in tokens]
