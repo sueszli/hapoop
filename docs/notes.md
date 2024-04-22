@@ -27,11 +27,9 @@ example
 
 # Task
 
-Use mrjob: https://mrjob.readthedocs.io/en/latest/
+Write a mapreduce job with MRJob that calculates the chi-squared value for each term in each category.
 
-As a preparation step for text classification, we want to select terms that discriminate well between categories.
-
-Write MapReduce jobs that calculate chi-square values for the terms in the review dataset.
+Chi squared measures significance of a term in a category. It can help with feature selection / dimensionality reduction in text classification.
 
 For preprocessing, make sure to perform the following steps:
 
