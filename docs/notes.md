@@ -29,19 +29,15 @@ example
 
 Use mrjob: https://mrjob.readthedocs.io/en/latest/
 
-As a preparation step for text classification, we want to select terms
-that discriminate well between categories. Write MapReduce jobs that
-calculate chi-square values for the terms in the review dataset.
+As a preparation step for text classification, we want to select terms that discriminate well between categories.
+
+Write MapReduce jobs that calculate chi-square values for the terms in the review dataset.
 
 For preprocessing, make sure to perform the following steps:
 
--   **Tokenization** to unigrams, using whitespaces, tabs, digits, and
-    the characters ()\[\]{}.!?,;:+=-\_\"\'\`\~#@&\*%€\$§\\/ as
-    delimiters
+-   **Tokenization** to unigrams, using whitespaces, tabs, digits, and the characters ()\[\]{}.!?,;:+=-\_\"\'\`\~#@&\*%€\$§\\/ as delimiters
 -   **Case folding**
--   **Stopword filtering**: use the stop word list \[on TUWEL\]
-    (stopwords.txt) . In addition, filter out all tokens consisting of
-    only one character.
+-   **Stopword filtering**: use `stopwords.txt`. In addition, filter out all tokens consisting of only one character.
 
 Write MapReduce jobs that efficiently
 
@@ -51,13 +47,8 @@ Write MapReduce jobs that efficiently
 
 Produce a file `output.txt` from the development set that contains the following:
 
--   One line for each product category (categories in alphabetic
-    order), that contains the top 75 most discriminative terms for
-    the category according to the chi-square test in descending
-    order, in the following format:
-    `<category name> term_1st:chi^2_value term_2nd:chi^2_value ... term_75th:chi^2_value`
--   One line containing the merged dictionary (all terms
-    space-separated and ordered alphabetically)
+-   One line for each product category (categories in alphabetic order), that contains the top 75 most discriminative terms for the category according to the chi-square test in descending order, in the following format: `<category name> term_1st:chi^2_value term_2nd:chi^2_value ... term_75th:chi^2_value`
+-   One line containing the merged dictionary (all terms space-separated and ordered alphabetically)
 
 # Submission
 
@@ -73,3 +64,5 @@ Produce a file `output.txt` from the development set that contains the following
 -   `src/`: subdirectory with source code of MapReduce implementation + script to run all jobs in the correct order with all necessary parameters.
     -   use arguments to pass the hdfs input path and the local output path to the script because the paths will change when the code is run on the cluster.
     -   code must be correct, well documented, and efficient (you will have a runtime limit - the best times last term were <20 minutes).
+
+Run tests on: https://jupyter01.lbd.hpc.tuwien.ac.at/user/e11912007/lab?redirects=1

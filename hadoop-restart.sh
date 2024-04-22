@@ -40,7 +40,11 @@ hdfs dfs -mkdir -p /user/${USERNAME}
 # open web ui
 echo "${green}done!${reset}"
 open http://localhost:9870/explorer.html#/user/${USERNAME}
-open http:/localhost:9870/dfshealth.html#tab-overview
-open http:/localhost:9864/
-open http:/localhost:8042/node
-open http:/localhost:8088/
+# open http:/localhost:9870/dfshealth.html#tab-overview
+# open http:/localhost:9864/
+# open http:/localhost:8042/node
+# open http:/localhost:8088/
+
+# you can start using the cli now
+# see: https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/CommandsManual.html
+# see: https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/FileSystemShell.html
