@@ -31,13 +31,15 @@ class ChiSquareJob(MRJob):
             stopwords = set(line.strip() for line in f)
         assert stopwords is not None
         filtered_tokens = [token for token in tokens if token not in stopwords and len(token) > 1]
-        yield None, list(filtered_tokens)
+        assert isinstance(filtered_tokens, list)
+        yield None, filtered_tokens
 
     def preprocessing_reducer(self, _, tokens):
         # count tokens
         token_counts = Counter()
         for token_list in tokens:
             token_counts.update(token_list)
+        assert isinstance(token_counts, Counter)
         yield None, token_counts
 
     # ------------------------
