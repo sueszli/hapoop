@@ -13,7 +13,7 @@ import heapq
 
 class ChiSquareJob(MRJob):
 
-    OUTPUT_PROTOCOL = mrjob.protocol.RawValueProtocol  # get rid of quotes
+    # OUTPUT_PROTOCOL = mrjob.protocol.RawValueProtocol  # get rid of quotes
 
     def configure_args(self):
         super(ChiSquareJob, self).configure_args()
@@ -46,6 +46,9 @@ class ChiSquareJob(MRJob):
         for ct in cat_termfreqs:
             ctf.update(ct)
 
+        # sort categories in alphabetic order
+        ctf = dict(sorted(ctf.items(), key=lambda x: x[0]))
+
         # 1) calculate chi2 of all terms for each category
         chi2_values = {}  # {category: {term: chi2}}
         total_in_all = sum(sum(tf.values()) for tf in ctf.values())
@@ -67,9 +70,6 @@ class ChiSquareJob(MRJob):
             # discard if no terms
             if not chi2_values[cat]:
                 del chi2_values[cat]
-
-        # 3) sort categories in alphabetic order
-        chi2_values = dict(sorted(chi2_values.items(), key=lambda x: x[0]))
 
         # 4) yield results
         # <category name> term1:chi2 term2:chi2 ... term75:chi2
