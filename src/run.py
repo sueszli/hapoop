@@ -1,5 +1,6 @@
 from mrjob.job import MRJob
 from mrjob.step import MRStep
+import mrjob.protocol
 
 import numpy as np
 import pandas as pd
@@ -23,13 +24,10 @@ from scipy.stats import chi2
 # debug: assert False, f"{tokens=}"
 
 
-# in output.txt:
-# - One line for each product category (categories in alphabetic order), that contains the top 75 terms with highest chi2 in category in ascending order, in this format:
-# - <category name> term_1st:chi^2_value term_2nd:chi^2_value ... term_75th:chi^2_value
-# - One line containing the merged dictionary (all terms space-separated and ordered alphabetically)
-
-
 class ChiSquareJob(MRJob):
+
+    # OUTPUT_PROTOCOL = mrjob.protocol.RawValueProtocol  # get rid of quotes
+
     def configure_args(self):
         super(ChiSquareJob, self).configure_args()
         self.add_file_arg("--stopwords", help="path to stopwords file")
@@ -61,32 +59,38 @@ class ChiSquareJob(MRJob):
         for ct in cat_termfreqs:
             ctf.update(ct)
 
-        tf: Counter = Counter()  # {term: freq} for all categories
-        for termfreq in ctf.values():
-            tf.update(termfreq)
-
         # 1) calculate chi2 of all terms for each category
         chi2_values = {}  # {category: {term: chi2}}
-        for cat, termfreq in ctf.items():
-            chi2_values[cat] = {}
-            total_in_cat = sum(termfreq.values())
-            total_in_all = sum(tf.values())
+        total_in_all = sum(sum(tf.values()) for tf in ctf.values())
 
-            for term, freq in termfreq.items():
+        for cat in list(ctf.keys()):
+            chi2_values[cat] = {}
+            total_in_cat = sum(ctf[cat].values())
+            for term, freq in ctf[cat].items():
+                total_of_term = sum(ctf[cat].get(term, 0) for cat in ctf.keys())
+
                 observed = freq
-                expected = tf[term] * total_in_cat / total_in_all
+                expected = total_of_term * total_in_cat / total_in_all
                 chi2_values[cat][term] = (observed - expected) ** 2 / expected
 
-        # 2) only keep top 75 terms per category with highest chi2 values, sort terms based on chi2 values
-        top_terms = {}
-        for cat, term_chi2 in chi2_values.items():
-            top_terms[cat] = heapq.nlargest(75, term_chi2, key=term_chi2.get)
+        # 2) filter by top 75 highest chi2 values, sorted in ascending order
+        top75_chi2 = {}
+        for cat in chi2_values.keys():
+            top75_chi2[cat] = dict(heapq.nlargest(75, chi2_values[cat].items(), key=lambda x: x[1]))
 
-        # 3) merge all terms, over all categories
-        all_terms = sorted(set(itertools.chain.from_iterable(top_terms.values())))
-        all_terms_str = " ".join(all_terms)
+        # 3) discard empty categories
+        top75_chi2 = {cat: terms for cat, terms in top75_chi2.items() if terms}
 
-        yield None, {"top_terms": top_terms, "all_terms": all_terms_str}
+        # 4) sort categories in alphabetic order
+        top75_chi2 = dict(sorted(top75_chi2.items(), key=lambda x: x[0]))
+
+        # 5) yield results for each category
+        for cat, terms in top75_chi2.items():
+            # <category name> term1:chi2 term2:chi2 ... term75:chi2
+            yield None, str(cat) + " " + " ".join(f"{term}:{chi2:.4f}" for term, chi2 in terms.items())
+
+            # one line with the merged dictionary (all terms space-separated and ordered alphabetically)
+            yield None, " ".join(sorted(terms.keys()))
 
     def steps(self):
         # fmt: off
