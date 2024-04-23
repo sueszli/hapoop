@@ -12,11 +12,11 @@ import heapq
 from multiprocessing import Value
 
 
-# A … number of elems in category which contain term
-# B … number of elems not in category which contain term
-# C … number of elems in category without term
-# D … number of elems not in category without term
-# N … total number of retrieved elems (can be omitted for ranking)
+# A … number of lines in category which contain term
+# B … number of lines not in category which contain term
+# C … number of lines in category without term
+# D … number of lines not in category without term
+# N … total number of retrieved lines (can be omitted for ranking)
 
 
 class ChiSquareJob(MRJob):
@@ -38,31 +38,29 @@ class ChiSquareJob(MRJob):
         terms = re.split(r'[ \t\d()\[\]{}.!?,;:+=\-_"\'~#@&*%€$§\/]+', review_text)
         terms = [t.lower() for t in terms if t not in self.stopwords and len(t) > 1]
 
-        tf = Counter(terms)  # {term: freq} of a review
-        yield category, tf
+        for term in terms:
+            yield term, category
 
-    def init_reducer(self):
-        self.num_lines = Value("i", 0)
-        self.ctf = {}
+    def reducer(self, term: str, categories: list[str]):
+    
 
-    def reducer(self, category: str, tfs: list[Counter]):
-        # increment counter
-        with self.num_lines.get_lock():
-            self.num_lines.value += 1
+#     def reducer(self, token: str, categories: list):
 
-        # flatten
-        cat_tf = Counter()
-        for tf in tfs:
-            cat_tf.update(tf)
+#         category_dict = Counter(categories)  # for each category, number of times this token appears
+#         token_counts = sum(category_dict.values())  # number of times this token appears in all categories
 
-        self.ctf[category] = cat_tf
 
-    def final_reducer(self):
-        # sort categories in alphabetic order
-        self.ctf = dict(sorted(self.ctf.items(), key=lambda x: x[0]))
+#         category_count = MRChiSquared.counts_categories # TODO: will this work on Hadoop? are class variables accessible to all noes?
+#         N = category_count.get("Total") # total number of reviews
 
-        # 1) calculate chi2 of all terms for each category
-        yield None, self.num_lines
+#         for category in category_dict:
+#             A = category_dict[category]
+#             B = token_counts - A
+#             C = category_count[category] - A
+#             D = N - A - B - C  # = N - token_counts - category_count[category] + A
+#             chi_squared = (N * ((A*D - B*C)**2) ) / ( (A+B)*(A+C)*(B+D)*(C+D) )
+#             yield category, (token, chi_squared)
+# # 
 
     def steps(self):
         # fmt: off
@@ -70,10 +68,9 @@ class ChiSquareJob(MRJob):
             MRStep(
                 mapper_init=self.init_mapper,
                 mapper=self.mapper,
-                reducer_init=self.init_reducer,
-                reducer=self.reducer,
-                reducer_final=self.final_reducer
-            )
+                # reducer_init=self.reducer_init,
+                reducer=self.reducer
+            ),
         ]
         # fmt: on
 
