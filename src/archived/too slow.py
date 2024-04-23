@@ -15,9 +15,9 @@ import heapq
 
 class ChiSquareJob(MRJob):
 
-    INPUT_PROTOCOL = mrjob.protocol.JSONValueProtocol
-    # OUTPUT_PROTOCOL = mrjob.protocol.TextProtocol # get rid of quotes
-    SORT_VALUES = True  # sort values
+    # INPUT_PROTOCOL = mrjob.protocol.JSONValueProtocol
+    # OUTPUT_PROTOCOL = mrjob.protocol.TextProtocol
+    # SORT_VALUES = True  # sort values
 
     def configure_args(self):
         super(ChiSquareJob, self).configure_args()

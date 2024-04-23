@@ -42,6 +42,9 @@ python3 run.py -r hadoop --hadoop-streaming-jar /usr/lib/hadoop/tools/lib/hadoop
 
 # task
 
+-   try to make my solution faster
+-   look at other dudes solution
+
 -   implement based on assignment
 -   check if you can generate `output.txt` on the server -> use `–jobconf` to increase parallelism: `–jobconf mapreduce.job.maps=50 –jobconf mapreduce.job.reduces=50`
 -   maybe also ask pia for her solutions

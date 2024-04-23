@@ -32,18 +32,18 @@ class ChiSquareJob(MRJob):
         terms = re.split(r'[ \t\d()\[\]{}.!?,;:+=\-_"\'~#@&*%€$§\/]+', review_text)
         terms = [t.lower() for t in terms if t not in self.stopwords and len(t) > 1]
 
-        yield None, category  # --> channel 1
+        yield None, category  # channel 1
 
         for term in terms:
-            yield term, category  # --> channel 2
+            yield term, category  # channel 2
 
     def reducer(self, key, values):
-        if key is None:  # --> handle channel 1
+        if key is None:
             cats = list(values)
             total = len(cats)
             cat_count = Counter(cats)
             yield None, (total, cat_count)
-        else:  # --> handle channel 2
+        else:
             pass
 
     def steps(self):

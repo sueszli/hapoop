@@ -9,15 +9,13 @@ import functools
 import itertools
 import re
 import json
-from collections import Counter
+from collections import Counter, defaultdict
 import heapq
 
 
 class ChiSquareJob(MRJob):
 
-    INPUT_PROTOCOL = mrjob.protocol.JSONValueProtocol
-    # OUTPUT_PROTOCOL = mrjob.protocol.TextProtocol # get rid of quotes
-    SORT_VALUES = True  # sort values
+    OUTPUT_PROTOCOL = mrjob.protocol.TextProtocol
 
     def configure_args(self):
         super(ChiSquareJob, self).configure_args()
@@ -36,36 +34,35 @@ class ChiSquareJob(MRJob):
         terms = re.split(r'[ \t\d()\[\]{}.!?,;:+=\-_"\'~#@&*%€$§\/]+', review_text)
         terms = [t.lower() for t in terms if t not in self.stopwords and len(t) > 1]
 
-        tc = {}  # {term: {category: count}}
         for term in terms:
+            yield term, category
+
+    def combiner(self, term, categories):
+        yield None, (term, Counter(categories))
+
+    def reducer(self, _, t_c_list: list[Counter]):
+        tc = {}  # {term: {category: count}}
+        t_c_list = list(t_c_list)
+        for term, cat_count in t_c_list:
             if term not in tc:
                 tc[term] = Counter()
-            tc[term][category] += 1
-        yield None, tc
+            tc[term].update(cat_count)
 
-    def reducer(self, _, tcs: list[Counter]):
-        tc = {}  # {term: {category: count}}
-        for elem in tcs:
-            for term, cat_count in elem.items():
-                if term not in tc:
-                    tc[term] = Counter()
-                tc[term].update(cat_count)
+        # precompute some values
+        term_total = {t: sum(c.values()) for t, c in tc.items()}
+        cat_total = defaultdict(int)
+        for term, counts in tc.items():
+            for cat, count in counts.items():
+                cat_total[cat] += count
 
-        # 1) calculate chi2 of all categories per term
-
-        # N … total num of lines                     = tc[i][j] for all terms i and categories j
-        # A … num of lines with term, in cat         = tc[term][cat]
-        # B … num of lines with term, not in cat     = sum(tc[term][j] for j in tc[term].keys()) - A
-        # C … num of lines without term, in cat      = sum(tc[i][cat] for i in tc.keys()) - A
-        # D … num of lines without term, not in act  = N - A - B - C
-
+        # 1) calculate chi2 of all terms for each category
         chi2_cat_term = {}
         N = sum(tc[i][j] for i in tc.keys() for j in tc[i].keys())
         for term, cat_count in tc.items():
             for cat, count in cat_count.items():
                 A = count
-                B = sum(tc[term].values()) - A
-                C = sum(tc[i].get(cat, 0) for i in tc.keys()) - A
+                B = term_total[term] - A
+                C = cat_total[cat] - A
                 D = N - A - B - C
 
                 nominator = N * (A * D - B * C) ** 2
@@ -76,7 +73,23 @@ class ChiSquareJob(MRJob):
                     chi2_cat_term[cat] = {}
                 chi2_cat_term[cat][term] = chi2
 
-        yield None, chi2_cat_term
+        # 2) sort chi2_cat_term by category
+        chi2_cat_term = dict(sorted(chi2_cat_term.items(), key=lambda x: x[0]))
+
+        # 3) filter by top 75 highest chi2 values, sorted in ascending order
+        for cat, terms in chi2_cat_term.items():
+            chi2_cat_term[cat] = dict(heapq.nlargest(75, terms.items(), key=lambda x: x[1]))
+
+            # discard if no terms
+            if not chi2_cat_term[cat]:
+                del chi2_cat_term[cat]
+
+        # 4) yield results
+        # <category name> term1:chi2 term2:chi2 ... term75:chi2
+        for cat, terms in chi2_cat_term.items():
+            yield None, str(cat) + " " + " ".join(f"{term}:{chi2}" for term, chi2 in terms.items())
+        # merged dictionary (all terms space-separated and ordered alphabetically)
+        yield None, " ".join(sorted(list(itertools.chain.from_iterable(chi2_cat_term.values()))))
 
     def steps(self):
         # fmt: off
@@ -84,6 +97,7 @@ class ChiSquareJob(MRJob):
             MRStep(
                 mapper_init=self.init,
                 mapper=self.mapper,
+                combiner=self.combiner,
                 reducer=self.reducer,
             ),
         ]
