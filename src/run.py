@@ -61,22 +61,22 @@ class ChiSquareJob(MRJob):
                 chi2_values[cat][term] = (observed - expected) ** 2 / expected
 
         # 2) filter by top 75 highest chi2 values, sorted in ascending order
-        top75_chi2 = {}
-        for cat in chi2_values.keys():
-            top75_chi2[cat] = dict(heapq.nlargest(75, chi2_values[cat].items(), key=lambda x: x[1]))
+        for cat, terms in chi2_values.items():
+            chi2_values[cat] = dict(heapq.nlargest(75, terms.items(), key=lambda x: x[1]))
 
-        # 3) discard empty categories
-        top75_chi2 = {cat: terms for cat, terms in top75_chi2.items() if terms}
+            # discard if no terms
+            if not chi2_values[cat]:
+                del chi2_values[cat]
 
-        # 4) sort categories in alphabetic order
-        top75_chi2 = dict(sorted(top75_chi2.items(), key=lambda x: x[0]))
+        # 3) sort categories in alphabetic order
+        chi2_values = dict(sorted(chi2_values.items(), key=lambda x: x[0]))
 
-        # 5) yield results
+        # 4) yield results
         # <category name> term1:chi2 term2:chi2 ... term75:chi2
-        for cat, terms in top75_chi2.items():
+        for cat, terms in chi2_values.items():
             yield None, str(cat) + " " + " ".join(f"{term}:{chi2}" for term, chi2 in terms.items())
         # merged dictionary (all terms space-separated and ordered alphabetically)
-        yield None, " ".join(sorted(list(itertools.chain.from_iterable(top75_chi2.values()))))
+        yield None, " ".join(sorted(list(itertools.chain.from_iterable(chi2_values.values()))))
 
     def steps(self):
         # fmt: off
@@ -98,4 +98,4 @@ if __name__ == "__main__":
     ChiSquareJob.run()
     t2 = timer()
     delta = t2 - t1
-    # print(f"runtime: {delta:.4f} seconds")
+    print(f"runtime: {delta:.4f} seconds")
