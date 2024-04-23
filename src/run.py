@@ -33,7 +33,7 @@ from scipy.stats import chi2
 # - One line containing the merged dictionary (all terms space-separated and ordered alphabetically)
 
 
-# TODO: Calculate chi-square values for all unigram terms for each category
+# TODO: Calculate chi-square values for all tokens for each category
 class ChiSquareJob(MRJob):
     def configure_args(self):
         super(ChiSquareJob, self).configure_args()
@@ -54,9 +54,6 @@ class ChiSquareJob(MRJob):
         # tokenize, case fold, and filter out stopwords
         tokens = re.split(r'[ \t\d()\[\]{}.!?,;:+=\-_"\'~#@&*%€$§\/]+', review_text)
         tokens = [token.lower() for token in tokens if token not in self.stopwords and len(token) > 1]
-
-        # case fold
-        tokens = [token.lower() for token in tokens]
 
         # get term frequency: {term: occurences}
         termfreqdict = Counter(tokens)
