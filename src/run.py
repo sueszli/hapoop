@@ -3,7 +3,6 @@ from mrjob.step import MRStep
 import mrjob.protocol
 import mrjob
 
-
 from timeit import default_timer as timer
 import functools
 import itertools
@@ -60,10 +59,10 @@ class ChiSquareJob(MRJob):
         N = sum(tc[i][j] for i in tc.keys() for j in tc[i].keys())
         for term, cat_count in tc.items():
             for cat, count in cat_count.items():
-                A = count
-                B = term_total[term] - A
-                C = cat_total[cat] - A
-                D = N - A - B - C
+                A = count  # t, c
+                B = term_total[term] - A  # t, not c
+                C = cat_total[cat] - A  # not t, c
+                D = N - A - B - C  # not t, not c
 
                 nominator = N * (A * D - B * C) ** 2
                 denominator = (A + B) * (A + C) * (B + D) * (C + D)
