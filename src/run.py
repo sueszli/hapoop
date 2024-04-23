@@ -29,6 +29,7 @@ class ChiSquareJob(MRJob):
 
         # global state
         self.total = 0
+        self.cat_total = Counter()
 
     def mapper(self, _: None, line: str):
         json_dict = json.loads(line)
@@ -40,6 +41,7 @@ class ChiSquareJob(MRJob):
 
         # update global state
         self.total += 1
+        self.cat_total[category] += 1
 
         for term in terms:
             yield term, category
