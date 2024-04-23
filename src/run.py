@@ -33,44 +33,69 @@ from scipy.stats import chi2
 # - One line containing the merged dictionary (all terms space-separated and ordered alphabetically)
 
 
+"""
+chi2 = sum((O_i - E_i)^2 / E_i)
+where:
+- O_i = observed frequency of term i in category j
+- E_i = expected frequency of term i in category j
+      = frequency of i * probability of i
+      = total frequency of term i in all categories * (total frequency of all terms in category j / total frequency of all terms in all categories)
+"""
+
+
 # TODO: Calculate chi-square values for all tokens for each category
 class ChiSquareJob(MRJob):
     def configure_args(self):
         super(ChiSquareJob, self).configure_args()
         self.add_file_arg("--stopwords", help="path to stopwords file")
 
-    def init_category_counter(self):
+    def init(self):
         self.stopwords = set()
         with open(self.options.stopwords, "r") as f:
             self.stopwords = set(line.strip() for line in f)
 
-    def get_termfreq_from_review(self, _, line):
-        assert _ is None
-
+    def get_line_tokenfreq(self, _: None, line: str):
         json_dict = json.loads(line)
         review_text = json_dict["reviewText"]
         category = json_dict["category"]
 
-        # tokenize, case fold, and filter out stopwords
         tokens = re.split(r'[ \t\d()\[\]{}.!?,;:+=\-_"\'~#@&*%€$§\/]+', review_text)
         tokens = [token.lower() for token in tokens if token not in self.stopwords and len(token) > 1]
 
-        # get term frequency: {term: occurences}
-        termfreqdict = Counter(tokens)
-        yield category, termfreqdict
+        tokenfreqs = Counter(tokens)
+        yield category, tokenfreqs
 
-    def reducer(self, category, termfreqdicts: list[Counter]):
-        # merge termfreqdicts
-        merged = functools.reduce(lambda x, y: x + y, termfreqdicts)
-        yield category, merged
+    def get_category_tokenfreq(self, category: str, tokenfreqs: list[Counter]):
+        # merge all counters
+        category_tokenfreq = Counter()
+        for tokenfreq in tokenfreqs:
+            category_tokenfreq += tokenfreq
+
+        # combine
+        yield "all", {category: category_tokenfreq}
+
+    def get_chi2(self, _, category_tokenfreqs: list[dict[str, Counter]]):
+        # merge all counters
+        cat_token_freqs = {}
+        for ctfs in category_tokenfreqs:
+            for category, tokenfreqs in ctfs.items():
+                cat_token_freqs[category] = tokenfreqs
+
+        # calculate total frequency of all terms in all categories
+        total_freq_all_terms_all_categories = sum(sum(tokenfreq.values()) for tokenfreq in cat_token_freqs.values())
+        yield "all", total_freq_all_terms_all_categories
 
     def steps(self):
         # fmt: off
         return [
             MRStep(
-                mapper_init=self.init_category_counter,
-                mapper=self.get_termfreq_from_review,
+                mapper_init=self.init,
+                mapper=self.get_line_tokenfreq,
+                reducer=self.get_category_tokenfreq
             ),
+            MRStep(
+                reducer=self.get_chi2
+            )
         ]
         # fmt: on
 
