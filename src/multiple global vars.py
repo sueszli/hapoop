@@ -15,6 +15,9 @@ import heapq
 
 class ChiSquareJob(MRJob):
 
+    # OUTPUT_PROTOCOL = mrjob.protocol.RawValueProtocol  # get rid of quotes
+    # SORT_VALUES = True  # sort values
+
     def configure_args(self):
         super(ChiSquareJob, self).configure_args()
         self.add_file_arg("--stopwords", help="path to stopwords file")
@@ -24,6 +27,10 @@ class ChiSquareJob(MRJob):
         with open(self.options.stopwords, "r") as f:
             self.stopwords = set(line.strip() for line in f)
 
+        # global state
+        self.total = 0
+        self.cat_total = Counter()
+
     def mapper(self, _: None, line: str):
         json_dict = json.loads(line)
         review_text = json_dict["reviewText"]
@@ -32,22 +39,37 @@ class ChiSquareJob(MRJob):
         terms = re.split(r'[ \t\d()\[\]{}.!?,;:+=\-_"\'~#@&*%€$§\/]+', review_text)
         terms = [t.lower() for t in terms if t not in self.stopwords and len(t) > 1]
 
-        yield None, category
+        # update global state
+        self.total += 1
+        self.cat_total[category] += 1
 
         for term in terms:
             yield term, category
 
+    def mapper_final(self):
+        # use seperate channel to send global state to reducer
+        # after all mappers have finished
+        yield None, (self.total, self.cat_total)
+
     def reducer(self, key, values):
         if key is None:
-            cats = list(values)
-            total = len(cats)
-            cat_count = Counter(cats)
-            yield None, (total, cat_count)
+            vals = list(values)
+            fsts = [v[0] for v in vals]
+            snds = [v[1] for v in vals]
+
+            # merge
+            total = sum(fsts)
+            cat_total = Counter()
+            for c in snds:
+                cat_total.update(c)
+
+            assert total == sum(cat_total.values())
+
+            yield None, (total, cat_total)
         else:
-            pass
-            # Handle normal key-value pairs
-            # for value in values:
-            # yield key, value
+            term = key
+            categories = list(values)
+            # ...
 
     # HOW DO I SHARE STATE BETWEEN MAPPER AND REDUCER?
 
@@ -70,6 +92,7 @@ class ChiSquareJob(MRJob):
             MRStep(
                 mapper_init=self.init,
                 mapper=self.mapper,
+                mapper_final=self.mapper_final,
                 reducer=self.reducer,
             ),
         ]
