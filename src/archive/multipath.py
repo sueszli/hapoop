@@ -10,35 +10,26 @@ import json
 import re
 
 
-# Define the MRJob class
 class MRTermFrequencyByCategory(MRJob):
     def configure_args(self):
         super(MRTermFrequencyByCategory, self).configure_args()
         self.add_file_arg("--stopwords", help="Path to the stopwords file")
 
-    # Load stopwords from file
     def mapper_init(self):
-        # Load stopwords from file
         self.stopwords = set()
         if self.options.stopwords:
             with open(self.options.stopwords, "r") as file:
                 for line in file:
                     self.stopwords.add(line.strip())
 
-    # Tokenize text using regex
     def tokenize(self, text):
-        # Define a regex pattern to match sequences that are not the specified delimiters
         pattern = re.compile(r"[^\s\t\d\(\)\[\]\{\}\.!?,;:\+=\-_\"'`~#@&*%€$§\\/]+")
         tokens = pattern.findall(text)
         return set(tokens)
 
-    # Preprocess review text by converting to lowercase, tokenizing, and removing stopwords
     def preprocess_review_text(self, review_text):
-        # Convert to lowercase and tokenize
         review_text_lower = review_text.lower()
         tokens = self.tokenize(review_text_lower)
-
-        # Remove stopwords
         return tokens - self.stopwords
 
     # Extract terms and category from review
@@ -53,10 +44,8 @@ class MRTermFrequencyByCategory(MRJob):
 
         preprocessed_text = self.preprocess_review_text(reviewText)
 
-        # Emit category count
         yield ("__category_count__", category), 1
 
-        # Emit term-category count
         for term in preprocessed_text:
             yield (term, category), 1
 
@@ -68,7 +57,6 @@ class MRTermFrequencyByCategory(MRJob):
     #       - None, ((term, category), count)
     #       - None, (('__category_count__', category), count)
     def reducer_aggregate_counts(self, key, values):
-        # Aggregate counts in reducer
         yield None, (key, sum(values))
 
     # Calculate chi-square values
@@ -136,8 +124,6 @@ class MRTermFrequencyByCategory(MRJob):
             word_list = sorted(set([word for sublist in list(category_values) for word, _ in sublist]))
             yield "dict:", " ".join(word_list)
 
-    # Define the steps for the MRJob
-
     def steps(self):
         return [
             MRStep(
@@ -151,6 +137,5 @@ class MRTermFrequencyByCategory(MRJob):
         ]
 
 
-# Run the MRJob
 if __name__ == "__main__":
     MRTermFrequencyByCategory.run()
