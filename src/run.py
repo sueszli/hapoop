@@ -19,14 +19,14 @@ from sklearn.feature_extraction.text import CountVectorizer
 from scipy.stats import chi2
 
 
-# $ python3.11 ./src/run.py ./data/reviews_devset.json --stopwords ./data/stopwords.txt
+# $ python3.11 ./src/run.py ./data/reviews_devset.json --stopwords ./data/stopwords.txt > output.txt
 
 # debug: assert False, f"{tokens=}"
 
 
 class ChiSquareJob(MRJob):
 
-    # OUTPUT_PROTOCOL = mrjob.protocol.RawValueProtocol  # get rid of quotes
+    OUTPUT_PROTOCOL = mrjob.protocol.RawValueProtocol  # get rid of quotes
 
     def configure_args(self):
         super(ChiSquareJob, self).configure_args()
@@ -87,7 +87,7 @@ class ChiSquareJob(MRJob):
         # 5) yield results for each category
         for cat, terms in top75_chi2.items():
             # <category name> term1:chi2 term2:chi2 ... term75:chi2
-            yield None, str(cat) + " " + " ".join(f"{term}:{chi2:.4f}" for term, chi2 in terms.items())
+            yield None, str(cat) + " " + " ".join(f"{term}:{chi2}" for term, chi2 in terms.items())
 
             # one line with the merged dictionary (all terms space-separated and ordered alphabetically)
             yield None, " ".join(sorted(terms.keys()))
@@ -112,4 +112,4 @@ if __name__ == "__main__":
     ChiSquareJob.run()
     t2 = timer()
     delta = t2 - t1
-    print(f"runtime: {delta:.4f} seconds")
+    # print(f"runtime: {delta:.4f} seconds")
