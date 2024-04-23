@@ -11,11 +11,6 @@ from collections import Counter
 import heapq
 
 
-# $ python3.11 ./src/run.py ./data/reviews_devset.json --stopwords ./data/stopwords.txt > output.txt
-
-# debug: assert False, f"{tokens=}"
-
-
 class ChiSquareJob(MRJob):
 
     OUTPUT_PROTOCOL = mrjob.protocol.RawValueProtocol  # get rid of quotes
@@ -76,12 +71,12 @@ class ChiSquareJob(MRJob):
         # 4) sort categories in alphabetic order
         top75_chi2 = dict(sorted(top75_chi2.items(), key=lambda x: x[0]))
 
-        # 5) yield results for each category
+        # 5) yield results
+        # <category name> term1:chi2 term2:chi2 ... term75:chi2
         for cat, terms in top75_chi2.items():
-            # <category name> term1:chi2 term2:chi2 ... term75:chi2
             yield None, str(cat) + " " + " ".join(f"{term}:{chi2}" for term, chi2 in terms.items())
-
-            # one line with the merged dictionary (all terms space-separated and ordered alphabetically)
+        # merged dictionary (all terms space-separated and ordered alphabetically)
+        for cat, terms in top75_chi2.items():
             yield None, " ".join(sorted(terms.keys()))
 
     def steps(self):

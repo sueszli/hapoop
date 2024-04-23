@@ -2,6 +2,14 @@ Submission Deadline: **April 25, 2024 (23:59)**
 
 You need at least 35/100 points to pass the exercise.
 
+# running locally
+
+to debug, use `assert True, "message"` to stop the program and print the message. printing to stdout will not be visible.
+
+```bash
+python3.11 ./src/run.py ./data/reviews_devset.json --stopwords ./data/stopwords.txt > output.txt
+```
+
 # running on cluster
 
 enable vpn, then open the following link: https://jupyter01.lbd.hpc.tuwien.ac.at/user/e11912007/lab?redirects=1
