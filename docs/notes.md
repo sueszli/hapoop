@@ -41,6 +41,6 @@ python3 run.py -r hadoop --hadoop-streaming-jar /usr/lib/hadoop/tools/lib/hadoop
 
 # task
 
--   implement based on assignment ✅
--   check if you can generate `output.txt` on the server ✅
+-   implement based on assignment
+-   check if you can generate `output.txt` on the server
 -   write a report

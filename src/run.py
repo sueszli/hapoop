@@ -9,28 +9,33 @@ import re
 import json
 from collections import Counter
 import heapq
-from multiprocessing import Value
 
+# 1) calculate chi2 of all terms per category
+# tc = {term: {category: count}
 
-# A … number of lines in category which contain term
-# B … number of lines not in category which contain term
-# C … number of lines in category without term
-# D … number of lines not in category without term
-# N … total number of retrieved lines (can be omitted for ranking)
+# N … total num of lines                    = tc[i][j] for all terms i and categories j
+# A … num of lines with term, in C          = tc[term][cat]
+# B … num of lines with term, not in C      = sum(tc[term].values()) - A
+# C … num of lines without term, in C       = sum(c[cat].get(term, 0) for c in tc.values())
+# D … num of lines without term, not in C   = N - A - B - C
+
+# mapper_init=self.init, <- share state with previous step
 
 
 class ChiSquareJob(MRJob):
+
+    # OUTPUT_PROTOCOL = mrjob.protocol.RawValueProtocol  # get rid of quotes
 
     def configure_args(self):
         super(ChiSquareJob, self).configure_args()
         self.add_file_arg("--stopwords", help="path to stopwords file")
 
-    def init_mapper(self):
+    def init(self):
         self.stopwords = set()
         with open(self.options.stopwords, "r") as f:
             self.stopwords = set(line.strip() for line in f)
 
-    def mapper(self, _, line: str):
+    def emit_term_category(self, _: None, line: str):
         json_dict = json.loads(line)
         review_text = json_dict["reviewText"]
         category = json_dict["category"]
@@ -41,42 +46,34 @@ class ChiSquareJob(MRJob):
         for term in terms:
             yield term, category
 
-    def reducer(self, term: str, categories: list[str]):
-    
+    def emit_term_category_count(self, term: str, categories: list[str]):
+        yield None, (term, Counter(categories))
 
-#     def reducer(self, token: str, categories: list):
+    def gather_term_category_count(self, _, elems):
+        term_category_counts = {}
+        for term, category_count in elems:
+            term_category_counts[term] = category_count
 
-#         category_dict = Counter(categories)  # for each category, number of times this token appears
-#         token_counts = sum(category_dict.values())  # number of times this token appears in all categories
-
-
-#         category_count = MRChiSquared.counts_categories # TODO: will this work on Hadoop? are class variables accessible to all noes?
-#         N = category_count.get("Total") # total number of reviews
-
-#         for category in category_dict:
-#             A = category_dict[category]
-#             B = token_counts - A
-#             C = category_count[category] - A
-#             D = N - A - B - C  # = N - token_counts - category_count[category] + A
-#             chi_squared = (N * ((A*D - B*C)**2) ) / ( (A+B)*(A+C)*(B+D)*(C+D) )
-#             yield category, (token, chi_squared)
-# # 
+        yield None, term_category_counts
 
     def steps(self):
         # fmt: off
         return [
             MRStep(
-                mapper_init=self.init_mapper,
-                mapper=self.mapper,
-                # reducer_init=self.reducer_init,
-                reducer=self.reducer
+                mapper_init=self.init,
+                mapper=self.emit_term_category,
+                reducer=self.emit_term_category_count
             ),
+            MRStep(
+                reducer=self.gather_term_category_count
+            )
         ]
         # fmt: on
 
 
 if __name__ == "__main__":
-    start = timer()
+    t1 = timer()
     ChiSquareJob.run()
-    end = timer()
-    print(f"execution time: {end - start}s")
+    t2 = timer()
+    delta = t2 - t1
+    print(f"runtime: {delta:.4f} seconds")
