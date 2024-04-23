@@ -7,7 +7,8 @@ You need at least 35/100 points to pass the exercise.
 to debug, use `assert True, "message"` to stop the program and print the message. printing to stdout will not be visible.
 
 ```bash
-python3.11 ./src/run.py ./data/reviews_devset.json --stopwords ./data/stopwords.txt > output.txt
+# python3.11 ./src/run.py ./data/reviews_devset.json --jobconf mapred.map.tasks=12 --jobconf mapred.reduce.tasks=12 --stopwords ./data/stopwords.txt > output.txt
+python3.11 ./src/run.py ./data/reviews_devset.json --jobconf mapred.reduce.tasks=12 --stopwords ./data/stopwords.txt > output.txt
 ```
 
 # running on cluster
@@ -42,5 +43,8 @@ python3 run.py -r hadoop --hadoop-streaming-jar /usr/lib/hadoop/tools/lib/hadoop
 # task
 
 -   implement based on assignment
--   check if you can generate `output.txt` on the server
+-   check if you can generate `output.txt` on the server -> use `–jobconf` to increase parallelism: `–jobconf mapreduce.job.maps=50 –jobconf mapreduce.job.reduces=50`
+-   maybe also ask pia for her solutions
 -   write a report
+
+-   ping people from tuwel that still have a free place in their group

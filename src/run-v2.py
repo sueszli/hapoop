@@ -40,6 +40,38 @@ class ChiSquareJob(MRJob):
     def emit_term_category_count(self, term: str, categories: list[str]):
         yield None, (term, Counter(categories))
 
+    def gather_term_category_count(self, _, term_category_counts: list[tuple[str, Counter]]):
+        tc: dict[str, Counter] = {}  # {term: {category: count}
+        for term, category_count in term_category_counts:
+            tc[term] = category_count
+
+        # 1) calculate chi2 of all categories per term
+
+        # N … total num of lines                     = tc[i][j] for all terms i and categories j
+        # A … num of lines with term, in cat         = tc[term][cat]
+        # B … num of lines with term, not in cat     = sum(tc[term][j] for j in tc[term].keys()) - A
+        # C … num of lines without term, in cat      = sum(tc[i][cat] for i in tc.keys()) - A
+        # D … num of lines without term, not in act  = N - A - B - C
+
+        chi2_cat_term = {}
+        N = sum(tc[i][j] for i in tc.keys() for j in tc[i].keys())
+        for term, cat_count in tc.items():
+            for cat, count in cat_count.items():
+                A = count
+                B = sum(tc[term][j] for j in tc[term].keys()) - A
+                C = sum(tc[i].get(cat, 0) for i in tc.keys()) - A
+                D = N - A - B - C
+
+                nominator = N * (A * D - B * C) ** 2
+                denominator = (A + B) * (A + C) * (B + D) * (C + D)
+                chi2 = 0 if denominator == 0 else nominator / denominator
+
+                if cat not in chi2_cat_term:
+                    chi2_cat_term[cat] = {}
+                chi2_cat_term[cat][term] = chi2
+
+        yield None, chi2_cat_term
+
     def steps(self):
         # fmt: off
         return [
@@ -48,6 +80,9 @@ class ChiSquareJob(MRJob):
                 mapper=self.emit_term_category,
                 reducer=self.emit_term_category_count
             ),
+            MRStep(
+                reducer=self.gather_term_category_count
+            )
         ]
         # fmt: on
 
