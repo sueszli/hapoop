@@ -35,47 +35,29 @@ class ChiSquareJob(MRJob):
         terms = re.split(r'[ \t\d()\[\]{}.!?,;:+=\-_"\'~#@&*%€$§\/]+', review_text)
         terms = [t.lower() for t in terms if t not in self.stopwords and len(t) > 1]
 
-        tc = {}  # {term: {category: count}}
         for term in terms:
-            if term not in tc:
-                tc[term] = Counter()
-            tc[term][category] += 1
-        yield None, tc
+            yield term, category
 
-    def reducer(self, _, tcs: list[Counter]):
-        tc = {}  # {term: {category: count}}
-        for elem in tcs:
-            for term, cat_count in elem.items():
-                if term not in tc:
-                    tc[term] = Counter()
-                tc[term].update(cat_count)
-
-        # 1) calculate chi2 of all categories per term
-
+    def reducer(self, term: str, categories: list[str]):
         # N … total num of lines                     = tc[i][j] for all terms i and categories j
         # A … num of lines with term, in cat         = tc[term][cat]
         # B … num of lines with term, not in cat     = sum(tc[term][j] for j in tc[term].keys()) - A
         # C … num of lines without term, in cat      = sum(tc[i][cat] for i in tc.keys()) - A
         # D … num of lines without term, not in act  = N - A - B - C
 
-        chi2_cat_term = {}
-        N = sum(tc[i][j] for i in tc.keys() for j in tc[i].keys())
-        for term, cat_count in tc.items():
-            for cat, count in cat_count.items():
-                A = count
-                B = sum(tc[term].values()) - A
-                C = sum(tc[i].get(cat, 0) for i in tc.keys()) - A
-                D = N - A - B - C
+        tc = Counter(categories)
+        N = sum(tc.values())
+        for cat, count in tc.items():
+            A = count
+            B = total - A
+            C = sum(tc.values()) - A
+            D = total - A - B - C
 
-                nominator = N * (A * D - B * C) ** 2
-                denominator = (A + B) * (A + C) * (B + D) * (C + D)
-                chi2 = 0 if denominator == 0 else nominator / denominator
+            nominator = total * (A * D - B * C) ** 2
+            denominator = (A + B) * (A + C) * (B + D) * (C + D)
+            chi2 = 0 if denominator == 0 else nominator / denominator
 
-                if cat not in chi2_cat_term:
-                    chi2_cat_term[cat] = {}
-                chi2_cat_term[cat][term] = chi2
-
-        yield None, chi2_cat_term
+            yield None, (cat, term, chi2)
 
     def steps(self):
         # fmt: off

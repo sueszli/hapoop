@@ -32,35 +32,19 @@ class ChiSquareJob(MRJob):
         terms = re.split(r'[ \t\d()\[\]{}.!?,;:+=\-_"\'~#@&*%€$§\/]+', review_text)
         terms = [t.lower() for t in terms if t not in self.stopwords and len(t) > 1]
 
-        yield None, category
+        yield None, category  # --> channel 1
 
         for term in terms:
-            yield term, category
+            yield term, category  # --> channel 2
 
     def reducer(self, key, values):
-        if key is None:
+        if key is None:  # --> handle channel 1
             cats = list(values)
             total = len(cats)
             cat_count = Counter(cats)
             yield None, (total, cat_count)
-        else:
-            # handle normal key-value pairs
+        else:  # --> handle channel 2
             pass
-
-    # HOW DO I SHARE STATE BETWEEN MAPPER AND REDUCER?
-
-    # def emit_term_category_count(self, term: str, categories: list[str]):
-    #     cat_count = Counter(categories)  # term: {category: count}
-
-    #     N = GLOBAL.total
-
-    #     for category in categories:
-    #         A = cat_count[category]  # t, c
-    #         B = sum(cat_count.values()) - A  # t, ¬c
-    #         C = GLOBAL.cat_total[category] - A  # ¬t, c
-    #         D = N - A - B - C  # ¬t, ¬c
-    #         chi_squared = (N * ((A * D - B * C) ** 2)) / ((A + B) * (A + C) * (B + D) * (C + D))
-    #         yield category, (term, chi_squared)
 
     def steps(self):
         # fmt: off
