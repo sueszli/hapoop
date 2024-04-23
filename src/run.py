@@ -27,6 +27,9 @@ class ChiSquareJob(MRJob):
         with open(self.options.stopwords, "r") as f:
             self.stopwords = set(line.strip() for line in f)
 
+        # global state
+        self.total = 0
+
     def mapper(self, _: None, line: str):
         json_dict = json.loads(line)
         review_text = json_dict["reviewText"]
@@ -35,8 +38,19 @@ class ChiSquareJob(MRJob):
         terms = re.split(r'[ \t\d()\[\]{}.!?,;:+=\-_"\'~#@&*%€$§\/]+', review_text)
         terms = [t.lower() for t in terms if t not in self.stopwords and len(t) > 1]
 
+        # update global state
+        self.total += 1
+
         for term in terms:
             yield term, category
+
+    def mapper_final(self):
+        yield None, self.total
+
+    def reducer(self, key, values):
+        if key is None:
+            assert False, f"{sum(list(values))}"
+            yield key, values
 
     # HOW DO I SHARE STATE BETWEEN MAPPER AND REDUCER?
 
@@ -59,6 +73,7 @@ class ChiSquareJob(MRJob):
             MRStep(
                 mapper_init=self.init,
                 mapper=self.mapper,
+                mapper_final=self.mapper_final,
                 reducer=self.reducer,
             ),
         ]
