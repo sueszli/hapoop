@@ -49,6 +49,7 @@ class ChiSquareJob(MRJob):
     def mapper_final(self):
         # use seperate channel to send global state to reducer
         # after all mappers have finished
+        assert False, f"total: {self.total}, cat_total: {self.cat_total}"
         yield None, (self.total, self.cat_total)
 
     def reducer(self, key, values):
@@ -61,8 +62,7 @@ class ChiSquareJob(MRJob):
             cat_total = Counter()
             for c in snds:
                 cat_total.update(c)
-            assert False, f"{total=}, {cat_total=}"
-            yield key, values
+            # yield key, values
 
     # HOW DO I SHARE STATE BETWEEN MAPPER AND REDUCER?
 
