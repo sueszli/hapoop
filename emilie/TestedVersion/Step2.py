@@ -2,17 +2,16 @@
 Step 2: calculate the chi-squared value for each token in each category
 
 """
-
-# Import all libraries
+#Import all libraries 
 from mrjob.job import MRJob
 from collections import Counter
 from mrjob.step import MRStep
 import mrjob.protocol
 import json
-
 # from sortedcontainers import SortedSet  # sadly we're not allowed to use this module :(
 
 import preprocessing as pp
+
 
 
 class MRChiSquared(MRJob):
@@ -23,12 +22,12 @@ class MRChiSquared(MRJob):
     OUTPUT_PROTOCOL = mrjob.protocol.RawValueProtocol
 
     # read the result of the first Mapreduce from the file and store it to the counts_categories variable
-    with open("category_count.txt", "r") as category_count:
-        counts_categories = {}
-        for c in category_count:
-            counts_categories[c.split()[0].strip('"')] = int(c.split()[1])
+    with open('category_count.txt', 'r') as category_count:
+            counts_categories = {}
+            for c in category_count:
+                counts_categories[c.split()[0].strip('"')] = int(c.split()[1])
 
-    with open("src/stopwords.txt", "r") as f:
+    with open('src/stopwords.txt', 'r') as f:
         # define a class variable stopwords
         stopwords = f.read().split()  # stopwords is a list of stings
 
@@ -41,16 +40,21 @@ class MRChiSquared(MRJob):
 
     # define steps of the MapReduce
     def steps(self):
-        return [MRStep(mapper=self.mapper, reducer=self.reducer), MRStep(reducer=self.reducer1), MRStep(reducer=self.reducer2)]
+            return [
+                MRStep(mapper=self.mapper,
+                    reducer=self.reducer),
+                MRStep(reducer=self.reducer1),
+                MRStep(reducer=self.reducer2)
+            ]
 
     # The first mapper function
     # Input: lines of the json file
     # Output: key(token) : value (category) pairs
     def mapper(self, _, line: dict):
-
+         
         data = json.loads(line)
-        category = data["category"].lower()
-        reviewText = data["reviewText"]
+        category = data['category'].lower()
+        reviewText = data['reviewText']
 
         reviewText = pp.preprocess(reviewText, MRChiSquared.stopwords)  # reviewText : set of tokens
 
@@ -65,22 +69,24 @@ class MRChiSquared(MRJob):
         category_dict = Counter(categories)  # for each category, number of times this token appears
         token_counts = sum(category_dict.values())  # number of times this token appears in all categories
 
-        category_count = MRChiSquared.counts_categories  # TODO: will this work on Hadoop? are class variables accessible to all noes?
-        N = category_count.get("Total")  # total number of reviews
+
+        category_count = MRChiSquared.counts_categories # TODO: will this work on Hadoop? are class variables accessible to all noes?
+        N = category_count.get("Total") # total number of reviews
 
         for category in category_dict:
             A = category_dict[category]
             B = token_counts - A
             C = category_count[category] - A
             D = N - A - B - C  # = N - token_counts - category_count[category] + A
-            chi_squared = (N * ((A * D - B * C) ** 2)) / ((A + B) * (A + C) * (B + D) * (C + D))
+            chi_squared = (N * ((A*D - B*C)**2) ) / ( (A+B)*(A+C)*(B+D)*(C+D) )
             yield category, (token, chi_squared)
+
 
     def reducer1(self, category: str, values: list):
         # sort the tokens by chi-squared value in decreasing order:
         ranked_tokens = sorted(values, key=lambda x: x[1], reverse=True)[0:75]
         yield None, (category, ranked_tokens)  # send all categories to one node in order to sort them
-
+    
     def reducer2(self, _, tuples: list):
 
         # we wanted to use a sorted set to automatically remove duplicates and order all tokens
@@ -99,7 +105,7 @@ class MRChiSquared(MRJob):
         yield "", final_dict_str  # add the merged dictionary as the last line the output file
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     MRChiSquared.run()
 
 
