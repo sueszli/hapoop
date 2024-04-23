@@ -47,11 +47,21 @@ class ChiSquareJob(MRJob):
             yield term, category
 
     def mapper_final(self):
-        yield None, self.total
+        # use seperate channel to send global state to reducer
+        # after all mappers have finished
+        yield None, (self.total, self.cat_total)
 
     def reducer(self, key, values):
         if key is None:
-            assert False, f"{sum(list(values))}"
+            vals = list(values)
+            fsts = [v[0] for v in vals]
+            snds = [v[1] for v in vals]
+
+            total = sum(fsts)
+            cat_total = Counter()
+            for c in snds:
+                cat_total.update(c)
+            assert False, f"{total=}, {cat_total=}"
             yield key, values
 
     # HOW DO I SHARE STATE BETWEEN MAPPER AND REDUCER?
