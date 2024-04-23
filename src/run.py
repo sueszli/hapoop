@@ -15,6 +15,9 @@ import heapq
 
 class ChiSquareJob(MRJob):
 
+    # OUTPUT_PROTOCOL = mrjob.protocol.RawValueProtocol  # get rid of quotes
+    SORT_VALUES = True  # sort values
+
     def configure_args(self):
         super(ChiSquareJob, self).configure_args()
         self.add_file_arg("--stopwords", help="path to stopwords file")
@@ -32,37 +35,47 @@ class ChiSquareJob(MRJob):
         terms = re.split(r'[ \t\d()\[\]{}.!?,;:+=\-_"\'~#@&*%€$§\/]+', review_text)
         terms = [t.lower() for t in terms if t not in self.stopwords and len(t) > 1]
 
-        yield None, category
-
+        tc = {}  # {term: {category: count}}
         for term in terms:
-            yield term, category
+            if term not in tc:
+                tc[term] = Counter()
+            tc[term][category] += 1
+        yield None, tc
 
-    def reducer(self, key, values):
-        if key is None:
-            cats = list(values)
-            total = len(cats)
-            cat_count = Counter(cats)
-            yield None, (total, cat_count)
-        else:
-            pass
-            # Handle normal key-value pairs
-            # for value in values:
-            # yield key, value
+    def reducer(self, _, tcs: list[Counter]):
+        tc = {}  # {term: {category: count}}
+        for elem in tcs:
+            for term, cat_count in elem.items():
+                if term not in tc:
+                    tc[term] = Counter()
+                tc[term].update(cat_count)
 
-    # HOW DO I SHARE STATE BETWEEN MAPPER AND REDUCER?
+        # 1) calculate chi2 of all categories per term
 
-    # def emit_term_category_count(self, term: str, categories: list[str]):
-    #     cat_count = Counter(categories)  # term: {category: count}
+        # N … total num of lines                     = tc[i][j] for all terms i and categories j
+        # A … num of lines with term, in cat         = tc[term][cat]
+        # B … num of lines with term, not in cat     = sum(tc[term][j] for j in tc[term].keys()) - A
+        # C … num of lines without term, in cat      = sum(tc[i][cat] for i in tc.keys()) - A
+        # D … num of lines without term, not in act  = N - A - B - C
 
-    #     N = GLOBAL.total
+        chi2_cat_term = {}
+        N = sum(tc[i][j] for i in tc.keys() for j in tc[i].keys())
+        for term, cat_count in tc.items():
+            for cat, count in cat_count.items():
+                A = count
+                B = sum(tc[term].values()) - A
+                C = sum(tc[i].get(cat, 0) for i in tc.keys()) - A
+                D = N - A - B - C
 
-    #     for category in categories:
-    #         A = cat_count[category]  # t, c
-    #         B = sum(cat_count.values()) - A  # t, ¬c
-    #         C = GLOBAL.cat_total[category] - A  # ¬t, c
-    #         D = N - A - B - C  # ¬t, ¬c
-    #         chi_squared = (N * ((A * D - B * C) ** 2)) / ((A + B) * (A + C) * (B + D) * (C + D))
-    #         yield category, (term, chi_squared)
+                nominator = N * (A * D - B * C) ** 2
+                denominator = (A + B) * (A + C) * (B + D) * (C + D)
+                chi2 = 0 if denominator == 0 else nominator / denominator
+
+                if cat not in chi2_cat_term:
+                    chi2_cat_term[cat] = {}
+                chi2_cat_term[cat][term] = chi2
+
+        yield None, chi2_cat_term
 
     def steps(self):
         # fmt: off

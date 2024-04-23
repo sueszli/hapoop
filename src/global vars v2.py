@@ -15,9 +15,6 @@ import heapq
 
 class ChiSquareJob(MRJob):
 
-    # OUTPUT_PROTOCOL = mrjob.protocol.RawValueProtocol  # get rid of quotes
-    SORT_VALUES = True  # sort values
-
     def configure_args(self):
         super(ChiSquareJob, self).configure_args()
         self.add_file_arg("--stopwords", help="path to stopwords file")
@@ -35,8 +32,20 @@ class ChiSquareJob(MRJob):
         terms = re.split(r'[ \t\d()\[\]{}.!?,;:+=\-_"\'~#@&*%€$§\/]+', review_text)
         terms = [t.lower() for t in terms if t not in self.stopwords and len(t) > 1]
 
+        yield None, category
+
         for term in terms:
             yield term, category
+
+    def reducer(self, key, values):
+        if key is None:
+            cats = list(values)
+            total = len(cats)
+            cat_count = Counter(cats)
+            yield None, (total, cat_count)
+        else:
+            # handle normal key-value pairs
+            pass
 
     # HOW DO I SHARE STATE BETWEEN MAPPER AND REDUCER?
 
