@@ -76,8 +76,7 @@ class ChiSquareJob(MRJob):
         for cat, terms in top75_chi2.items():
             yield None, str(cat) + " " + " ".join(f"{term}:{chi2}" for term, chi2 in terms.items())
         # merged dictionary (all terms space-separated and ordered alphabetically)
-        for cat, terms in top75_chi2.items():
-            yield None, " ".join(sorted(terms.keys()))
+        yield None, " ".join(sorted(list(itertools.chain.from_iterable(top75_chi2.values()))))
 
     def steps(self):
         # fmt: off
