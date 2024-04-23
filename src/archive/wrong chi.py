@@ -13,7 +13,7 @@ import heapq
 
 class ChiSquareJob(MRJob):
 
-    # OUTPUT_PROTOCOL = mrjob.protocol.RawValueProtocol  # get rid of quotes
+    OUTPUT_PROTOCOL = mrjob.protocol.RawValueProtocol  # get rid of quotes
 
     def configure_args(self):
         super(ChiSquareJob, self).configure_args()

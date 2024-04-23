@@ -1,28 +1,3 @@
-Submission Deadline: **April 25, 2024 (23:59)**
-
-You need at least 35/100 points to pass the exercise.
-
-# running locally
-
-to debug, use `assert True, "message"` to stop the program and print the message. printing to stdout will not be visible.
-
-```bash
-# python3.11 ./src/run.py ./data/reviews_devset.json --jobconf mapred.map.tasks=12 --jobconf mapred.reduce.tasks=12 --stopwords ./data/stopwords.txt > output.txt
-python3.11 ./src/run.py ./data/reviews_devset.json --jobconf mapred.map.tasks=12 --jobconf mapred.reduce.tasks=12 --stopwords ./data/stopwords.txt > output.txt
-```
-
-# running on cluster
-
-enable vpn, then open the following link: https://jupyter01.lbd.hpc.tuwien.ac.at/user/e11912007/lab?redirects=1
-
-```bash
-# dev dataset
-python3 run.py -r hadoop --hadoop-streaming-jar /usr/lib/hadoop/tools/lib/hadoop-streaming-3.3.5.jar hdfs:///user/dic24_shared/amazon-reviews/full/reviews_devset.json --stopwords stopwords.txt > output.txt
-
-# full dataset
-python3 run.py -r hadoop --hadoop-streaming-jar /usr/lib/hadoop/tools/lib/hadoop-streaming-3.3.5.jar hdfs:///user/dic24_shared/amazon-reviews/full/reviewscombined.json --stopwords stopwords.txt > output.txt
-```
-
 # submission
 
 `<groupID>_DIC2024_Ex1.zip` must contain:
@@ -39,12 +14,3 @@ python3 run.py -r hadoop --hadoop-streaming-jar /usr/lib/hadoop/tools/lib/hadoop
 -   `src/`: subdirectory with source code of MapReduce implementation + script to run all jobs in the correct order with all necessary parameters.
     -   use arguments to pass the hdfs input path and the local output path to the script because the paths will change when the code is run on the cluster.
     -   code must be correct, well documented, and efficient (you will have a runtime limit - the best times last term were <20 minutes).
-
-# task
-
--   implement based on assignment
--   check if you can generate `output.txt` on the server -> use `–jobconf` to increase parallelism: `–jobconf mapreduce.job.maps=50 –jobconf mapreduce.job.reduces=50`
--   maybe also ask pia for her solutions
--   write a report
-
--   ping people from tuwel that still have a free place in their group
