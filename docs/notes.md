@@ -8,7 +8,7 @@ to debug, use `assert True, "message"` to stop the program and print the message
 
 ```bash
 # python3.11 ./src/run.py ./data/reviews_devset.json --jobconf mapred.map.tasks=12 --jobconf mapred.reduce.tasks=12 --stopwords ./data/stopwords.txt > output.txt
-python3.11 ./src/run.py ./data/reviews_devset.json --jobconf mapred.reduce.tasks=12 --stopwords ./data/stopwords.txt > output.txt
+python3.11 ./src/run.py ./data/reviews_devset.json --jobconf mapred.map.tasks=12 --jobconf mapred.reduce.tasks=12 --stopwords ./data/stopwords.txt > output.txt
 ```
 
 # running on cluster
