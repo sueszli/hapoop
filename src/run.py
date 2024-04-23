@@ -9,22 +9,28 @@ import re
 import json
 from collections import Counter
 import heapq
+from multiprocessing import Value
+
+
+# A … number of elems in category which contain term
+# B … number of elems not in category which contain term
+# C … number of elems in category without term
+# D … number of elems not in category without term
+# N … total number of retrieved elems (can be omitted for ranking)
 
 
 class ChiSquareJob(MRJob):
-
-    # OUTPUT_PROTOCOL = mrjob.protocol.RawValueProtocol  # get rid of quotes
 
     def configure_args(self):
         super(ChiSquareJob, self).configure_args()
         self.add_file_arg("--stopwords", help="path to stopwords file")
 
-    def init(self):
+    def init_mapper(self):
         self.stopwords = set()
         with open(self.options.stopwords, "r") as f:
             self.stopwords = set(line.strip() for line in f)
 
-    def get_line_termfreq(self, _: None, line: str):
+    def mapper(self, _, line: str):
         json_dict = json.loads(line)
         review_text = json_dict["reviewText"]
         category = json_dict["category"]
@@ -32,70 +38,48 @@ class ChiSquareJob(MRJob):
         terms = re.split(r'[ \t\d()\[\]{}.!?,;:+=\-_"\'~#@&*%€$§\/]+', review_text)
         terms = [t.lower() for t in terms if t not in self.stopwords and len(t) > 1]
 
-        termfreq = Counter(terms)  # {term: freq} of a review
-        yield category, termfreq
+        tf = Counter(terms)  # {term: freq} of a review
+        yield category, tf
 
-    def get_category_termfreq(self, category: str, termfreq: list[Counter]):
-        cat_termfreq = Counter()  # flatmap
-        for tf in termfreq:
-            cat_termfreq.update(tf)
-        yield None, {category: cat_termfreq}  # send to a single reducer
+    def init_reducer(self):
+        self.num_lines = Value("i", 0)
+        self.ctf = {}
 
-    def get_chi2(self, _, cat_termfreqs: list[dict[str, Counter]]):
-        ctf: dict[str, Counter] = {}  # {category: {term: freq}}
-        for ct in cat_termfreqs:
-            ctf.update(ct)
+    def reducer(self, category: str, tfs: list[Counter]):
+        # increment counter
+        with self.num_lines.get_lock():
+            self.num_lines.value += 1
 
+        # flatten
+        cat_tf = Counter()
+        for tf in tfs:
+            cat_tf.update(tf)
+
+        self.ctf[category] = cat_tf
+
+    def final_reducer(self):
         # sort categories in alphabetic order
-        ctf = dict(sorted(ctf.items(), key=lambda x: x[0]))
+        self.ctf = dict(sorted(self.ctf.items(), key=lambda x: x[0]))
 
         # 1) calculate chi2 of all terms for each category
-        chi2_values = {}  # {category: {term: chi2}}
-        total_in_all = sum(sum(tf.values()) for tf in ctf.values())
-
-        for cat in list(ctf.keys()):
-            chi2_values[cat] = {}
-            total_in_cat = sum(ctf[cat].values())
-            for term, freq in ctf[cat].items():
-                total_of_term = sum(ctf[cat].get(term, 0) for cat in ctf.keys())
-
-                observed = freq
-                expected = total_of_term * total_in_cat / total_in_all
-                chi2_values[cat][term] = (observed - expected) ** 2 / expected
-
-        # 2) filter by top 75 highest chi2 values, sorted in ascending order
-        for cat, terms in chi2_values.items():
-            chi2_values[cat] = dict(heapq.nlargest(75, terms.items(), key=lambda x: x[1]))
-
-            # discard if no terms
-            if not chi2_values[cat]:
-                del chi2_values[cat]
-
-        # 4) yield results
-        # <category name> term1:chi2 term2:chi2 ... term75:chi2
-        for cat, terms in chi2_values.items():
-            yield None, str(cat) + " " + " ".join(f"{term}:{chi2}" for term, chi2 in terms.items())
-        # merged dictionary (all terms space-separated and ordered alphabetically)
-        yield None, " ".join(sorted(list(itertools.chain.from_iterable(chi2_values.values()))))
+        yield None, self.num_lines
 
     def steps(self):
         # fmt: off
         return [
             MRStep(
-                mapper_init=self.init,
-                mapper=self.get_line_termfreq,
-                reducer=self.get_category_termfreq
-            ),
-            MRStep(
-                reducer=self.get_chi2
+                mapper_init=self.init_mapper,
+                mapper=self.mapper,
+                reducer_init=self.init_reducer,
+                reducer=self.reducer,
+                reducer_final=self.final_reducer
             )
         ]
         # fmt: on
 
 
 if __name__ == "__main__":
-    t1 = timer()
+    start = timer()
     ChiSquareJob.run()
-    t2 = timer()
-    delta = t2 - t1
-    print(f"runtime: {delta:.4f} seconds")
+    end = timer()
+    print(f"execution time: {end - start}s")
