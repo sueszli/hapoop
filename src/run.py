@@ -108,4 +108,4 @@ if __name__ == "__main__":
     ChiSquareJob.run()
     t2 = timer()
     delta = t2 - t1
-    print(f"runtime: {delta:.4f} seconds")
+    # print(f"runtime: {delta:.4f} seconds")
