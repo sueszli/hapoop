@@ -2,21 +2,13 @@ from mrjob.job import MRJob
 from mrjob.step import MRStep
 import mrjob.protocol
 
-import numpy as np
-import pandas as pd
-
 from timeit import default_timer as timer
-import math
 import functools
 import itertools
 import re
 import json
-import os
-from pathlib import Path
 from collections import Counter
 import heapq
-from sklearn.feature_extraction.text import CountVectorizer
-from scipy.stats import chi2
 
 
 # $ python3.11 ./src/run.py ./data/reviews_devset.json --stopwords ./data/stopwords.txt > output.txt

@@ -2,7 +2,19 @@ Submission Deadline: **April 25, 2024 (23:59)**
 
 You need at least 35/100 points to pass the exercise.
 
-# Submission
+# running on cluster
+
+enable vpn, then open the following link: https://jupyter01.lbd.hpc.tuwien.ac.at/user/e11912007/lab?redirects=1
+
+```bash
+# dev dataset
+python3 run.py -r hadoop --hadoop-streaming-jar /usr/lib/hadoop/tools/lib/hadoop-streaming-3.3.5.jar hdfs:///user/dic24_shared/amazon-reviews/full/reviews_devset.json --stopwords stopwords.txt > output.txt
+
+# full dataset
+python3 run.py -r hadoop --hadoop-streaming-jar /usr/lib/hadoop/tools/lib/hadoop-streaming-3.3.5.jar hdfs:///user/dic24_shared/amazon-reviews/full/reviewscombined.json --stopwords stopwords.txt > output.txt
+```
+
+# submission
 
 `<groupID>_DIC2024_Ex1.zip` must contain:
 
@@ -19,9 +31,8 @@ You need at least 35/100 points to pass the exercise.
     -   use arguments to pass the hdfs input path and the local output path to the script because the paths will change when the code is run on the cluster.
     -   code must be correct, well documented, and efficient (you will have a runtime limit - the best times last term were <20 minutes).
 
-# Task
+# task
 
--   implement based on assignment
--   check if you can generate `output.txt` on the server
-    -   Run tests on: https://jupyter01.lbd.hpc.tuwien.ac.at/user/e11912007/lab?redirects=1
+-   implement based on assignment ✅
+-   check if you can generate `output.txt` on the server ✅
 -   write a report
