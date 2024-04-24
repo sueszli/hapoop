@@ -75,30 +75,17 @@ class ChiSquareJob(MRJob):
             chi2 = (N * (A * D - B * C) ** 2) / ((A + B) * (A + C) * (B + D) * (C + D))
             yield cat, (term, chi2)
 
-    # def top75_reducer(self, cat: str, term_chi2: list[tuple[str, float]]):
-    #     top75_term_chi2 = heapq.nlargest(75, term_chi2, key=lambda x: x[1])
-
-    #     yield cat, " ".join([f"{term}:{chi2}" for term, chi2 in top75_term_chi2])
-    #     yield None, [term for term, _ in top75_term_chi2]
-
-    # def output_reducer(self, key: str, values: list):
-    #     if key != None:
-    #         yield key, values
-    #     else:
-    #         word_list = sorted(set(list(itertools.chain(*values))))
-    #         yield "dict:", " ".join(word_list)
-
     def top75_reducer(self, cat: str, term_chi2s: list[tuple[str, float]]):
         top75_term_chi2 = heapq.nlargest(75, term_chi2s, key=lambda x: x[1])
 
         yield cat, " ".join([f"{term}:{chi2}" for term, chi2 in top75_term_chi2])
-        yield "__terms__", [(term, chi2) for term, chi2 in top75_term_chi2]
+        yield None, [(term, chi2) for term, chi2 in top75_term_chi2]
 
     def output_reducer(self, key, cat_values):
-        if key != "__terms__":
+        if key != None:
             yield key, " ".join(cat_values)
         else:
-            word_list = sorted(set(itertools.chain(*cat_values)))
+            word_list = sorted(set([word for sublist in list(cat_values) for word, _ in sublist]))
             yield "dict:", " ".join(word_list)
 
     def steps(self):
