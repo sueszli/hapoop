@@ -89,7 +89,7 @@ class ChiSquareJob(MRJob):
                 term_count[term] += count
                 term_cat_count[(term, cat)] = count
 
-        # 1) calculate chi2 of all terms for each category
+        # 1. calculate chi2 of all terms for each category
         # can't merge with previous loop because we need to calculate N first
         chi2_cat_term = {}
         for term, cat in term_cat_count:
@@ -103,16 +103,16 @@ class ChiSquareJob(MRJob):
                 chi2_cat_term[cat] = {}
             chi2_cat_term[cat][term] = chi2
 
-        # 2) sort chi2 keys alphabetically
+        # 2. sort chi2 keys alphabetically
         chi2_cat_term = dict(sorted(chi2_cat_term.items(), key=lambda x: x[0]))
 
-        # 3) sort chi2 values and get top 75
+        # 3. sort chi2 values and get top 75
         for cat, terms in chi2_cat_term.items():
             chi2_cat_term[cat] = dict(heapq.nlargest(75, terms.items(), key=lambda x: x[1]))
             if not chi2_cat_term[cat]:
                 del chi2_cat_term[cat]
 
-        # 4) yield results
+        # 4. yield results
         # <category name> term1:chi2 term2:chi2 ... term75:chi2
         for cat, terms in chi2_cat_term.items():
             yield None, str(cat) + " " + " ".join(f"{term}:{chi2}" for term, chi2 in terms.items())
