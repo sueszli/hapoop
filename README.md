@@ -118,8 +118,6 @@ where:
 
 # test in cluster
 
-keep in mind that print statements will break mrjob. use `assert False, msg` instead.
-
 ```bash
 # dev dataset
 

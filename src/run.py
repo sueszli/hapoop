@@ -3,6 +3,7 @@ from mrjob.step import MRStep
 import mrjob.protocol
 import mrjob
 
+import logging
 from timeit import default_timer as timer
 import functools
 import itertools
@@ -10,6 +11,9 @@ import re
 import json
 from collections import Counter, defaultdict
 import heapq
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class ChiSquareJob(MRJob):
@@ -31,45 +35,39 @@ class ChiSquareJob(MRJob):
         category = json_dict["category"]
 
         terms = re.split(r'[ \t\d()\[\]{}.!?,;:+=\-_"\'~#@&*%€$§\/]+', review_text)
-        terms = [t.lower() for t in terms if t not in self.stopwords and len(t) > 1]
+        terms = set(terms) - self.stopwords
+        terms = [t.lower() for t in terms if len(t) > 1]
 
         for term in terms:
             yield term, category
 
     def combiner(self, term: str, categories: list[str]):
-        yield None, (term, Counter(categories))
+        yield None, (term, Counter(categories))  # {term: {category: count}}
 
     def reducer(self, _: None, t_c_list: list[Counter]):
-        tc = {}  # {term: {category: count}}
-        t_c_list = list(t_c_list)
-        for term, cat_count in t_c_list:
-            if term not in tc:
-                tc[term] = Counter()
-            tc[term].update(cat_count)
+        logger.info(f"reached final reducer")
+        t_c_list = list(t_c_list)  # [term, {category: count}]
 
-        # precompute some values (avoid loop rolls each iteration)
-        N = 0
+        # can't merge two loops because we need to calculate N first
+        N = 0  # total count
         term_total = defaultdict(int)  # {term: total count}
         cat_total = defaultdict(int)  # {category: total count}
-        for term, counts in tc.items():
-            for cat, count in counts.items():
+        for term, cat_count in t_c_list:
+            for cat, count in cat_count.items():
                 N += count
                 term_total[term] += count
                 cat_total[cat] += count
 
         # 1) calculate chi2 of all terms for each category
         chi2_cat_term = {}
-        for term, cat_count in tc.items():
+        for term, cat_count in t_c_list:
             for cat, count in cat_count.items():
-                A = count  # t, c
-                B = term_total[term] - A  # t, not c
-                C = cat_total[cat] - A  # not t, c
-                D = N - A - B - C  # not t, not c
+                A = count
+                B = term_total[term] - A
+                C = cat_total[cat] - A
+                D = N - A - B - C
 
-                nominator = N * (A * D - B * C) ** 2
-                denominator = (A + B) * (A + C) * (B + D) * (C + D)
-                chi2 = 0 if denominator == 0 else nominator / denominator
-
+                chi2 = (N * ((A * D - B * C) ** 2)) / ((A + B) * (A + C) * (B + D) * (C + D))
                 if cat not in chi2_cat_term:
                     chi2_cat_term[cat] = {}
                 chi2_cat_term[cat][term] = chi2
