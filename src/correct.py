@@ -32,6 +32,8 @@ class MRTermFrequencyByCategory(MRJob):
         tokens = self.tokenize(review_text_lower)
         return tokens - self.stopwords
 
+    # ------------------------------------------------------
+
     def mapper_extract_terms(self, _, line):
         review = json.loads(line)
         category = review["category"]
@@ -49,7 +51,7 @@ class MRTermFrequencyByCategory(MRJob):
 
     def reducer_chi_square(self, _, counts):
         category_counts = defaultdict(int)
-        cat_term_count = defaultdict(int)
+        term_counts = defaultdict(int)
         total_review_count = 0
         total_review_term_count = defaultdict(int)
 
@@ -59,12 +61,12 @@ class MRTermFrequencyByCategory(MRJob):
                 total_review_count += count
             else:
                 term, category = key
-                cat_term_count[(term, category)] = count
+                term_counts[(term, category)] = count
                 total_review_term_count[term] += count
 
         chi2_cat_term = {}
-        for term, category in cat_term_count:
-            A = cat_term_count[(term, category)]
+        for term, category in term_counts:
+            A = term_counts[(term, category)]
             B = total_review_term_count[term] - A
             C = category_counts[category] - A
             D = total_review_count - (A + B + C)
@@ -73,23 +75,12 @@ class MRTermFrequencyByCategory(MRJob):
             numerator = N * (A * D - B * C) ** 2
             denominator = (A + B) * (A + C) * (B + D) * (C + D)
             chi_square = numerator / denominator if denominator != 0 else 0
+
             if category not in chi2_cat_term:
                 chi2_cat_term[category] = {}
             chi2_cat_term[category][term] = chi_square
 
-    def reducer_top(self, category, term_chi_values):
-        sorted_terms = sorted(term_chi_values, key=lambda x: x[1], reverse=True)[:75]
-
-        top_terms_str = ", ".join([term + ":" + str(round(chi)) for term, chi in sorted_terms])
-        yield category, top_terms_str
-        yield "__terms__", sorted_terms
-
-    def reducer_final(self, key, category_values):
-        if key != "__terms__":
-            yield key, list(category_values)
-        else:
-            word_list = sorted(set([word for sublist in list(category_values) for word, _ in sublist]))
-            yield "dict:", " ".join(word_list)
+        # sort, get top 75
 
     def steps(self):
         return [
@@ -99,8 +90,6 @@ class MRTermFrequencyByCategory(MRJob):
                 reducer=self.reducer_aggregate_counts,
             ),
             MRStep(reducer=self.reducer_chi_square),
-            MRStep(mapper=self.reducer_top),
-            MRStep(reducer=self.reducer_final),
         ]
 
 
