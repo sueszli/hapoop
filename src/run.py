@@ -98,7 +98,7 @@ class ChiSquareJob(MRJob):
         if key != "__terms__":
             yield key, " ".join(cat_values)
         else:
-            word_list = sorted(set([word for sublist in list(cat_values) for word, _ in sublist]))
+            word_list = sorted(set(itertools.chain(*cat_values)))
             yield "dict:", " ".join(word_list)
 
     def steps(self):
