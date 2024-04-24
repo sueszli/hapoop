@@ -78,15 +78,16 @@ class ChiSquareJob(MRJob):
     def top75_reducer(self, cat: str, term_chi2s: list[tuple[str, float]]):
         top75_term_chi2 = heapq.nlargest(75, term_chi2s, key=lambda x: x[1])
 
-        yield cat, " ".join([f"{term}:{chi2}" for term, chi2 in top75_term_chi2])
-        yield None, [(term, chi2) for term, chi2 in top75_term_chi2]
+        yield cat, " ".join([f"{term}:{chi2}" for term, chi2 in top75_term_chi2])  # channel 1: "cat term:chi2"
+        yield None, [term for term, _ in top75_term_chi2]  # channel 2: [term]
 
-    def output_reducer(self, key, cat_values):
+    def output_reducer(self, key: Optional[str], vals: list):
+        vals = list(vals)
         if key != None:
-            yield key, " ".join(cat_values)
+            assert len(vals) == 1
+            yield key, str(vals[0])  # channel 1: keep as is
         else:
-            word_list = sorted(set([word for sublist in list(cat_values) for word, _ in sublist]))
-            yield "dict:", " ".join(word_list)
+            yield None, " ".join(sorted(list(itertools.chain(*vals))))  # channel 2: sort terms
 
     def steps(self):
         # fmt: off
