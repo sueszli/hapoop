@@ -1,6 +1,10 @@
-# team unknown
+Exercise 1
 
-everyone left lol - had to do all of this by myself
+Group 2
+
+Author: Yahya Jabary (11912007)
+
+_Note:_ Due to unforeseen circumstances (my group members quit the course), I had to do this assignment by myself.
 
 # pearson's chi square statistic
 
@@ -23,6 +27,8 @@ where:
 -   $D$ = number of documents that are: not in $c$, don't contain $t$
 
 # submission
+
+dataset: In this exercise, we will be using the Amazon Review Dataset 2014, which contains 142.8 million reviews from 24 product categories. The new releases can be found here (https://amazon-reviews-2023.github.io/).
 
 `<groupID>_DIC2024_Ex1.zip` must contain:
 
