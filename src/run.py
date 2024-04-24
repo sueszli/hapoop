@@ -21,17 +21,11 @@ class ChiSquareJob(MRJob):
         self.add_file_arg("--stopwords", help="path to stopwords file")
 
     def init(self):
-        """
-        store stopwords in memory for fast lookup during mapping
-        """
         self.stopwords = set()
         with open(self.options.stopwords, "r") as f:
             self.stopwords = set(line.strip() for line in f)
 
     def mapper(self, _: None, line: str):
-        """
-        read json lines, emit (term, category) pairs
-        """
         json_dict = json.loads(line)
         review_text = json_dict["reviewText"]
         category = json_dict["category"]
@@ -43,12 +37,9 @@ class ChiSquareJob(MRJob):
             yield term, category
 
     def combiner(self, term: str, categories: list[str]):
-        """
-        local combiner: merge (term, category) pairs for each term in the json line
-        """
         yield None, (term, Counter(categories))
 
-    def reducer(self, _, t_c_list: list[Counter]):
+    def reducer(self, _: None, t_c_list: list[Counter]):
         tc = {}  # {term: {category: count}}
         t_c_list = list(t_c_list)
         for term, cat_count in t_c_list:
@@ -56,16 +47,18 @@ class ChiSquareJob(MRJob):
                 tc[term] = Counter()
             tc[term].update(cat_count)
 
-        # precompute some values
-        term_total = {t: sum(c.values()) for t, c in tc.items()}
-        cat_total = defaultdict(int)
+        # precompute some values (avoid loop rolls each iteration)
+        N = 0
+        term_total = defaultdict(int)  # {term: total count}
+        cat_total = defaultdict(int)  # {category: total count}
         for term, counts in tc.items():
             for cat, count in counts.items():
+                N += count
+                term_total[term] += count
                 cat_total[cat] += count
 
         # 1) calculate chi2 of all terms for each category
         chi2_cat_term = {}
-        N = sum(tc[i][j] for i in tc.keys() for j in tc[i].keys())
         for term, cat_count in tc.items():
             for cat, count in cat_count.items():
                 A = count  # t, c
