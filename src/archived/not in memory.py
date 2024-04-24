@@ -30,26 +30,27 @@ class ChiSquareJob(MRJob):
         with open(self.options.stopwords, "r") as f:
             self.stopwords = set(line.strip() for line in f)
 
-    def mapper(self, _: None, line: str):
+    def chi2_mapper(self, _: None, line: str):
         json_dict = json.loads(line)
         review_text = json_dict["reviewText"]
-        category = json_dict["category"]
+        cat = json_dict["category"]
 
         terms = re.split(r'[ \t\d()\[\]{}.!?,;:+=\-_"\'~#@&*%€$§\/]+', review_text)
         terms = set(terms) - self.stopwords
         terms = [t.lower() for t in terms if len(t) > 1]
 
         for term in terms:
-            yield (term, category), 1
+            yield (term, cat), 1
 
         # each line / review has exactly one category
-        yield (None, category), 1
+        yield (None, cat), 1
 
-    def combiner(self, key: tuple[Optional[str], str], counts: list[int]):
+    def chi2_combiner(self, key: tuple[Optional[str], str], counts: list[int]):
         # aggregate counts from both channels, send to single reducer
         yield None, (key, sum(counts))
 
-    def reducer(self, _: None, key_count: list[tuple[tuple[Optional[str], str], int]]):
+    def chi2_reducer(self, _: None, key_count: list[tuple[tuple[Optional[str], str], int]]):
+        logger.info("reached chi2_reducer")
         N = 0
         cat_count = defaultdict(int)
         term_count = defaultdict(int)
@@ -64,9 +65,7 @@ class ChiSquareJob(MRJob):
                 term_count[term] += count
                 term_cat_count[(term, cat)] = count
 
-        # 1) calculate chi2 of all terms for each category
         # can't merge with previous loop because we need to calculate N first
-        chi2_cat_term = {}
         for term, cat in term_cat_count:
             A = term_cat_count[(term, cat)]
             B = term_count[term] - A
@@ -74,34 +73,36 @@ class ChiSquareJob(MRJob):
             D = N - A + B + C
 
             chi2 = (N * (A * D - B * C) ** 2) / ((A + B) * (A + C) * (B + D) * (C + D))
-            if cat not in chi2_cat_term:
-                chi2_cat_term[cat] = {}
-            chi2_cat_term[cat][term] = chi2
+            yield cat, (term, chi2)
 
-        # 2) sort chi2 keys alphabetically
-        chi2_cat_term = dict(sorted(chi2_cat_term.items(), key=lambda x: x[0]))
+    def top75_reducer(self, cat: str, term_chi2s: list[tuple[str, float]]):
+        top75_term_chi2 = heapq.nlargest(75, term_chi2s, key=lambda x: x[1])
 
-        # 3) sort chi2 values and get top 75
-        for cat, terms in chi2_cat_term.items():
-            chi2_cat_term[cat] = dict(heapq.nlargest(75, terms.items(), key=lambda x: x[1]))
-            if not chi2_cat_term[cat]:
-                del chi2_cat_term[cat]
+        yield cat, " ".join([f"{term}:{chi2}" for term, chi2 in top75_term_chi2])  # channel 1: "cat term:chi2"
+        yield None, [term for term, _ in top75_term_chi2]  # channel 2: [term]
 
-        # 4) yield results
-        # <category name> term1:chi2 term2:chi2 ... term75:chi2
-        for cat, terms in chi2_cat_term.items():
-            yield None, str(cat) + " " + " ".join(f"{term}:{chi2}" for term, chi2 in terms.items())
-        # all terms space-separated and ordered alphabetically
-        yield None, " ".join(sorted(list(itertools.chain.from_iterable(chi2_cat_term.values()))))
+    def output_reducer(self, key: Optional[str], vals: list):
+        vals = list(vals)
+        if key != None:
+            assert len(vals) == 1
+            yield key, str(vals[0])  # channel 1: keep as is
+        else:
+            yield None, " ".join(sorted(list(itertools.chain(*vals))))  # channel 2: sort terms
 
     def steps(self):
         # fmt: off
         return [
             MRStep(
                 mapper_init=self.init,
-                mapper=self.mapper,
-                combiner=self.combiner,
-                reducer=self.reducer,
+                mapper=self.chi2_mapper,
+                combiner=self.chi2_combiner,
+                reducer=self.chi2_reducer,
+            ),
+            MRStep(
+                reducer=self.top75_reducer,
+            ),
+            MRStep(
+                reducer=self.output_reducer,
             ),
         ]
         # fmt: on
