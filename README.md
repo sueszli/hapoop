@@ -1,15 +1,35 @@
 ![](./assets/white.png)
 
-The goal of this assignment is to implement a MapReduce job that calculates the Pearson's $\chi^2$ statistic for each term in each category of the Amazon Review Dataset. The $\chi^2$ statistic measures the significance of a term in a category. It can help with feature selection / dimensionality reduction in text classification.
+<br><br>
+
+# MapReduce of $\chi^2$ statistic for text classification
+
+The $\chi^2$ statistic [^chi] measures the dependence between categorical stochastic variables. It can help with feature selection / dimensionality reduction in text classification.
+
+Here we're using a 2x2 contingency table because we have 2 independent variables: terms $t$ from categories $c$ of reviews from the Amazon Review Dataset (2014) [^amazon].
+
+$$
+\chi_{tc}^2=\frac{N(AD-BC)^2}{(A+B)(A+C)(B+D)(C+D)}
+$$
+
+where:
+
+-   $N$ = total number of retrieved documents (can be left out if you only care about ranking order, not scale)
+-   $A$ = number of documents that are: in $c$, contain $t$
+-   $B$ = number of documents that are: not in $c$, contain $t$
+-   $C$ = number of documents that are: in $c$, don't contain $t$
+-   $D$ = number of documents that are: not in $c$, don't contain $t$
+
+There is no one-size-fits-all . It depends on the dataset scale, your computational resources and the desired accuracy.
 
 # Benchmarking
 
-I benchmarked the code both locally and on the Jupyter01 cluster at the TU Wien HPC lab.
+I benchmarked the code both locally and on the Jupyter cluster at the HPC lab at TU Wien. The specs are as follows:
 
 -   Local specs: Darwin Yahyas-MacBook-Pro.local 23.2.0 Darwin Kernel Version 23.2.0: Wed Nov 15 21:55:06 PST 2023; root:xnu-10002.61.3~2/RELEASE_ARM64_T6020 arm64 (MacBook Pro M2 16GB RAM)
 -   Cluster specs: Linux jupyter01.lbd.hpc.tuwien.ac.at 4.18.0-513.11.1.el8_9.x86_64 #1 SMP Wed Jan 10 22:58:54 UTC 2024 x86_64 x86_64 x86_64 GNU/Linux (12-node Hadoop cluster, ~100GB RAM)
 
-The dataset to be processed is the [Amazon Review Dataset 2014](https://amazon-reviews-2023.github.io/), which contains 142.8 million reviews from 24 product categories and is 56GB in size. The dev dataset is a reduced (0.1%) sample of the full dataset and is included in the `data` directory. I used the reduced dataset for local testing and both the reduced and full datasets for cluster testing stored in HDFS.
+The dataset processed is the Amazon Review Dataset (2014) [^Amazon], which contains 142.8 million reviews from 24 product categories and is 56GB in size. The dev dataset is a reduced (0.1%) sample of the full dataset and is included in the `data` directory. I used the reduced dataset for local testing and both the reduced and full datasets for cluster testing stored in HDFS.
 
 I ran each test 12 times using the `time` module in Python to exclude the time taken to start the Python interpreter and load the code and took the average of the 12 runs.
 
@@ -30,13 +50,11 @@ I also played around with the `--jobconf mapred.map.tasks=50 --jobconf mapred.re
 
 The results are as follows:
 
--   Local: 12.17s
--   Cluster (dev dataset): 77.53s
+-   Local: 12.17s average
+-   Cluster (dev dataset): 77.53s average
 -   Cluster (full dataset): varies too much based on cluster load ranged anywhere from 10 minutes to 1 hour
 
-So overall, despite this being a toy implementation with a prototyping language, the code performed decent enough to suffice for small scale testing under the given circumstances.
-
-<br><br><br><br>
+So overall, despite this being a toy implementation in a prototyping language, the performance should suffice for small-scale testing.
 
 # –––––––––––––––––––––––––––––––––––––––––––––
 
@@ -47,13 +65,11 @@ So overall, despite this being a toy implementation with a prototyping language,
 
     -   max 8 pdf pages of A4 size in total
     -   section 1: introduction
-    -   section 2: problem overview: chi squared measures significance of a term in a category. it can help with feature selection / dimensionality reduction in text classification.
+    -   section 2: problem overview
     -   section 3: methodology and approach, must include a figure illustrating the strategy and pipeline in one figure must show the data flow clearly and indicate the chosen `<key,value>` design (all input, intermediary, and output pairs).
     -   section 4: conclusions
 
 -   `src/`: subdirectory with source code of MapReduce implementation + script to run all jobs in the correct order with all necessary parameters.
-    -   use arguments to pass the hdfs input path and the local output path to the script because the paths will change when the code is run on the cluster.
-    -   code must be correct, well documented, and efficient (you will have a runtime limit - the best times last term were <20 minutes).
 
 # don't use inproduction
 
@@ -129,26 +145,7 @@ def reducer(self, word, counts): # returns (w, num) of entire input
     -   `[(k, [v])] -> [(k', v')]`
     -   reduce tasks process one key-list entry at a time
 
-# pearson's chi square statistic
+---
 
-see: https://web.pdx.edu/~newsomj/pa551/lectur11.htm
-
-$\chi^{2}$ test measures dependence between categorical stochastic variables.
-
-the $\chi^{2}_{t,c}$ value is the lack of independence of term $t$ from category $c$.
-
-$$
-\chi_{tc}^2=\frac{N(AD-BC)^2}{(A+B)(A+C)(B+D)(C+D)}
-$$
-
-where:
-
--   $N$ = total number of retrieved documents (can be left out if you only care about ranking order, not scale)
--   $A$ = number of documents that are: in $c$, contain $t$
--   $B$ = number of documents that are: not in $c$, contain $t$
--   $C$ = number of documents that are: in $c$, don't contain $t$
--   $D$ = number of documents that are: not in $c$, don't contain $t$
-
-# test in cluster
-
-on: https://jupyter01.lbd.hpc.tuwien.ac.at/
+[^chi]: https://web.pdx.edu/~newsomj/pa551/lectur11.htm
+[^amazon]: https://amazon-reviews-2023.github.io/
