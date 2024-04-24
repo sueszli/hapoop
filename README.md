@@ -1,4 +1,4 @@
-![](./assets/none.png)
+![](./assets/white.png)
 
 The goal of this assignment is to implement a MapReduce job that calculates the Pearson's $\chi^2$ statistic for each term in each category of the Amazon Review Dataset. The $\chi^2$ statistic measures the significance of a term in a category. It can help with feature selection / dimensionality reduction in text classification.
 
