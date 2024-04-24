@@ -1,8 +1,8 @@
+> this install guide is exclusively for macos
+
 docs: https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/SingleCluster.html
 
 tutorial: https://www.youtube.com/watch?v=H999fIuymqc
-
-this install guide is exclusively for macos
 
 # install binary
 

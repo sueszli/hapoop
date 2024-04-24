@@ -11,6 +11,13 @@ from collections import Counter
 import heapq
 
 
+"""
+discarded implementation:
+
+the used chi-square formula isn't meant for NLP significance testing
+"""
+
+
 class ChiSquareJob(MRJob):
 
     # OUTPUT_PROTOCOL = mrjob.protocol.RawValueProtocol  # get rid of quotes

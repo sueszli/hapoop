@@ -17,6 +17,15 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+"""
+discarded implementation: multi-reduce approach
+
+- slower than single-reduce
+- consumes more memory than single-reduce
+- more complex than single-reduce (in terms of code)
+"""
+
+
 class ChiSquareJob(MRJob):
 
     OUTPUT_PROTOCOL = mrjob.protocol.TextProtocol

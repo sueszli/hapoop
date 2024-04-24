@@ -1,7 +1,12 @@
-<!-- Author: Yahya Jabary (11912007)
+**Group:** Group 2 - Yahya Jabary (11912007)
 
-_Note:_ Due to unforeseen circumstances (my group members quit the course), I had to do this assignment by myself.
- -->
+> Note: Due to the unfortunate circumstances of my group members quitting the course 2 days before the deadline without any prior notice or communication / contribution to the project, I had to do this assignment by myself. I hope this is taken into consideration when grading the assignment.
+
+**Dataset:** Locally we use the reduced (0.1% sample) version of the [Amazon Review Dataset 2014](https://amazon-reviews-2023.github.io/). But on the 12-node Hadoop cluster we use the full dataset (56GB). A copy of the dev dataset is included in the `data` directory.
+
+**Objective:** The goal of this assignment is to implement a MapReduce job that calculates the Pearson's $\chi^2$ statistic for each term in each category of the Amazon Review Dataset. The $\chi^2$ statistic measures the significance of a term in a category. It can help with feature selection / dimensionality reduction in text classification.
+
+# –––––––––––––––––––––––––––––––––––
 
 # submission
 
