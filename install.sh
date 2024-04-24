@@ -11,7 +11,4 @@ pipreqs . > /dev/null
 pip3 install -r requirements.txt > /dev/null
 
 # run locally
-time python3 \
-    ./src/run.py ./data/reviews_devset.json \
-    --jobconf mapred.map.tasks=12 --jobconf mapred.reduce.tasks=12 \
-    --stopwords ./data/stopwords.txt
+python3 ./src/run.py ./data/reviews_devset.json --jobconf mapred.map.tasks=12 --jobconf mapred.reduce.tasks=12 --stopwords ./data/stopwords.txt

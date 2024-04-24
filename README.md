@@ -118,12 +118,15 @@ where:
 
 # test in cluster
 
+on: https://jupyter01.lbd.hpc.tuwien.ac.at/
+
 ```bash
-# dev dataset
+# local
+python3 ./src/run.py ./data/reviews_devset.json --jobconf mapred.map.tasks=12 --jobconf mapred.reduce.tasks=12 --stopwords ./data/stopwords.txt > output.txt # 12.17s
 
-python3 run.py -r hadoop --hadoop-streaming-jar /usr/lib/hadoop/tools/lib/hadoop-streaming-3.3.5.jar hdfs:///user/dic24_shared/amazon-reviews/full/reviews_devset.json --jobconf mapred.map.tasks=50 --jobconf mapred.reduce.tasks=50 --stopwords stopwords.txt > output.txt
+# cluster: dev dataset
+python3 run.py -r hadoop --hadoop-streaming-jar /usr/lib/hadoop/tools/lib/hadoop-streaming-3.3.5.jar hdfs:///user/dic24_shared/amazon-reviews/full/reviews_devset.json --stopwords stopwords.txt > output.txt # 77.53s
 
-# full dataset
-
-python3 run.py -r hadoop --hadoop-streaming-jar /usr/lib/hadoop/tools/lib/hadoop-streaming-3.3.5.jar hdfs:///user/dic24_shared/amazon-reviews/full/reviewscombined.json --jobconf mapred.map.tasks=50 --jobconf mapred.reduce.tasks=50 --stopwords stopwords.txt > output.txt
+# local: full dataset
+python3 run.py -r hadoop --hadoop-streaming-jar /usr/lib/hadoop/tools/lib/hadoop-streaming-3.3.5.jar hdfs:///user/dic24_shared/amazon-reviews/full/reviewscombined.json --stopwords stopwords.txt > output.txt
 ```
