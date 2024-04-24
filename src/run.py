@@ -21,11 +21,17 @@ class ChiSquareJob(MRJob):
         self.add_file_arg("--stopwords", help="path to stopwords file")
 
     def init(self):
+        """
+        store stopwords in memory for fast lookup during mapping
+        """
         self.stopwords = set()
         with open(self.options.stopwords, "r") as f:
             self.stopwords = set(line.strip() for line in f)
 
     def mapper(self, _: None, line: str):
+        """
+        read json lines, emit (term, category) pairs
+        """
         json_dict = json.loads(line)
         review_text = json_dict["reviewText"]
         category = json_dict["category"]
@@ -36,7 +42,10 @@ class ChiSquareJob(MRJob):
         for term in terms:
             yield term, category
 
-    def combiner(self, term, categories):
+    def combiner(self, term: str, categories: list[str]):
+        """
+        local combiner: merge (term, category) pairs for each term in the json line
+        """
         yield None, (term, Counter(categories))
 
     def reducer(self, _, t_c_list: list[Counter]):
