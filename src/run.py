@@ -12,7 +12,7 @@ import json
 from collections import Counter, defaultdict
 import heapq
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
@@ -38,54 +38,53 @@ class ChiSquareJob(MRJob):
         terms = set(terms) - self.stopwords
         terms = [t.lower() for t in terms if len(t) > 1]
 
-        yield ("__category_count__", category), 1
+        # channel for category count
+        yield ("__chan__", category), 1
 
+        # channel for term count (a line has multiple terms, so we can't use a single yield)
         for term in terms:
             yield (term, category), 1
 
-    def combiner(self, key, count):
-        yield None, (key, sum(count))
+    def combiner(self, key: str | tuple[str, str], counts: list[int]):
+        # avoid channel key conflict
+        # if isinstance(key, tuple):
+        #     assert key[0] != "__chan__"
+        # else:
+        #     assert key == "__chan__"
 
-    def reducer(self, _, counts):
-        # N = 0
-        # term_total = defaultdict(int)
-        # cat_total = defaultdict(int)
-        # for key, count in counts:
-        #     if key[0] == "__category_count__":
-        #         cat_total[key[1]] = count
-        #         N += count
-        #     else:
-        #         term, category = key
-        #         term_total[term] += count
-        category_counts = defaultdict(int)
-        term_counts = defaultdict(int)
-        total_review_count = 0
-        total_review_term_count = defaultdict(int)
+        # chunk multiple yields from the same mapper, send all to the same reducer
+        yield None, (key, sum(counts))
 
-        for key, count in counts:
-            if key[0] == "__category_count__":
-                category_counts[key[1]] = count
-                total_review_count += count
+    def reducer(self, _: None, vals: list[tuple[str | tuple[str, str], int]]):
+        N = 0
+        term_count = defaultdict(int)
+        cat_count = defaultdict(int)
+        term_cat_count = defaultdict(int)
+
+        for elem in vals:
+            assert len(elem) == 2
+            key: str | tuple[str, str] = elem[0]
+            val: int = elem[1]
+
+            if isinstance(key, str):
+                N += val
             else:
                 term, category = key
-                term_counts[(term, category)] = count
-                total_review_term_count[term] += count
+                term_cat_count[(term, category)] += val
+                term_count[term] += val
+                cat_count[category] += val
 
         chi2_cat_term = {}
-        for term, category in term_counts:
-            A = term_counts[(term, category)]
-            B = total_review_term_count[term] - A
-            C = category_counts[category] - A
-            D = total_review_count - (A + B + C)
-            N = total_review_count
+        for term, category in term_cat_count:
+            A = term_cat_count[(term, category)]
+            B = term_count[term] - A
+            C = cat_count[category] - A
+            D = N - A + B + C
 
-            numerator = N * (A * D - B * C) ** 2
-            denominator = (A + B) * (A + C) * (B + D) * (C + D)
-            chi_square = numerator / denominator if denominator != 0 else 0
-
+            chi2 = (N * (A * D - B * C) ** 2) / ((A + B) * (A + C) * (B + D) * (C + D))
             if category not in chi2_cat_term:
                 chi2_cat_term[category] = {}
-            chi2_cat_term[category][term] = chi_square
+            chi2_cat_term[category][term] = chi2
 
         # sort, get top 75
         for cat, terms in chi2_cat_term.items():
@@ -93,6 +92,9 @@ class ChiSquareJob(MRJob):
 
             if not chi2_cat_term[cat]:
                 del chi2_cat_term[cat]
+
+        # sort by category
+        chi2_cat_term = dict(sorted(chi2_cat_term.items(), key=lambda x: x[0]))
 
         for cat, terms in chi2_cat_term.items():
             yield None, str(cat) + " " + " ".join(f"{term}:{chi2}" for term, chi2 in terms.items())

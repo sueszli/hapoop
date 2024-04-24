@@ -50,21 +50,21 @@ class ChiSquareJob(MRJob):
 
         # can't merge two loops because we need to calculate N first
         N = 0  # total count
-        term_total = defaultdict(int)  # {term: total count}
-        cat_total = defaultdict(int)  # {category: total count}
+        term_count = defaultdict(int)  # {term: total count}
+        cat_count = defaultdict(int)  # {category: total count}
         for term, cat_count in t_c_list:
             for cat, count in cat_count.items():
                 N += count
-                term_total[term] += count
-                cat_total[cat] += count
+                term_count[term] += count
+                cat_count[cat] += count
 
         # 1) calculate chi2 of all terms for each category
         chi2_cat_term = {}
         for term, cat_count in t_c_list:
             for cat, count in cat_count.items():
                 A = count
-                B = term_total[term] - A
-                C = cat_total[cat] - A
+                B = term_count[term] - A
+                C = cat_count[cat] - A
                 D = N - A - B - C
 
                 chi2 = (N * ((A * D - B * C) ** 2)) / ((A + B) * (A + C) * (B + D) * (C + D))
