@@ -78,7 +78,7 @@ I also played around with the `--jobconf mapred.map.tasks=50 --jobconf mapred.re
 
 The results are as follows:
 
--   Local: 12.17s average
+-   Local (mrjob, no hadoop): 12.17s average
 -   Cluster (dev dataset): 77.53s average
 -   Cluster (full dataset): varies too much based on cluster load - ranged anywhere from 10 minutes to 1 hour
 
