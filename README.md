@@ -80,7 +80,7 @@ The results are as follows:
 
 -   Local: 12.17s average
 -   Cluster (dev dataset): 77.53s average
--   Cluster (full dataset): varies too much based on cluster load ranged anywhere from 10 minutes to 1 hour
+-   Cluster (full dataset): varies too much based on cluster load - ranged anywhere from 10 minutes to 1 hour
 
 So overall, despite this being a toy implementation in a prototyping language, the performance should suffice for small-scale testing.
 
