@@ -48,7 +48,7 @@ Because I wanted to emit the 75 highest $\chi^2$ values of terms per category be
 
 It wasn't an issue because although I had to store a fraction of the _entire_ dataset in the memory of a single node, the dataset was small enough to fit into memory. This is a common tradeoff in distributed computing: you can either optimize for network traffic or for memory usage. In this case I optimized for memory usage. But in practice you would want to scale the number of your mappers and reducers according to the size of your dataset vs. the memory of your nodes.
 
-There is no one-size-fits-all solution to this problem. It depends on the size of your dataset, the memory of your nodes, the network bandwidth, the number of nodes, the number of mappers and reducers, the complexity of your computation etc.
+There is no one-size-fits-all solution to this problem. It depends on the size of your dataset, the memory of your nodes, the network bandwidth, the number of nodes, the complexity of your specific computation etc.
 
 So in conclusion: I wouldn't recommend using this code in production - But I encourage you to try implementing something similar yourself because of how rewarding it is.
 
