@@ -1,9 +1,5 @@
 ![](./assets/white.png)
 
-<br>
-
-# MapReduce calculation of $\chi^2$ scores
-
 The $\chi^2$ statistic [^chi] measures the dependence between categorical stochastic variables. It can help with feature selection / dimensionality reduction in text classification.
 
 In this case we're dealing with 2 independent variables: terms $t$ from categories $c$ of reviews from the Amazon Review Dataset (2014) [^amazon]. We therefore need to compute a 2x2 contingency table for each term-category pair.
