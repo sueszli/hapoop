@@ -2,7 +2,7 @@
 
 <br>
 
-# Feature Selection for Text Classification Using the $\chi^2$ Statistic
+# MapReduce calculation of $\chi^2$ scores
 
 The $\chi^2$ statistic [^chi] measures the dependence between categorical stochastic variables. It can help with feature selection / dimensionality reduction in text classification.
 
