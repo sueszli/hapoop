@@ -1,12 +1,12 @@
 ![](./assets/white.png)
 
-<br><br>
+<br>
 
-# MapReduce of $\chi^2$ statistic for text classification
+# MapReduce of $\chi^2$ for text classification
 
 The $\chi^2$ statistic [^chi] measures the dependence between categorical stochastic variables. It can help with feature selection / dimensionality reduction in text classification.
 
-Here we're using a 2x2 contingency table because we have 2 independent variables: terms $t$ from categories $c$ of reviews from the Amazon Review Dataset (2014) [^amazon].
+In this case we're dealing with 2 independent variables: terms $t$ from categories $c$ of reviews from the Amazon Review Dataset (2014) [^amazon]. We therefore need to compute a 2x2 contingency table for each term-category pair.
 
 $$
 \chi_{tc}^2=\frac{N(AD-BC)^2}{(A+B)(A+C)(B+D)(C+D)}
@@ -20,7 +20,39 @@ where:
 -   $C$ = number of documents that are: in $c$, don't contain $t$
 -   $D$ = number of documents that are: not in $c$, don't contain $t$
 
-There is no one-size-fits-all . It depends on the dataset scale, your computational resources and the desired accuracy.
+When computing this statistic, for datasets too large to fit into memory, we can use the MapReduce pattern to distribute the computation across multiple nodes.
+
+The MapReduce pattern consists of 3 steps:
+
+-   Mapping: $(k, v) \rightarrow [(k', v')]$
+    -   each map tasks receives one or more chunks of the distributed filesystem as unique key-value pairs
+    -   keys are ignored unless you're piping data from one map task to another
+    -   keys don't have to be unique
+    -   values are processed by the map function
+-   Grouping: $(k', [v']) \rightarrow [(k', [v'])]$
+    -   the key-value paris are collected by the master process, then grouped if they have the same key
+    -   each list with the same key gets then sent to the same process
+-   Reducing: $(k', [v']) \rightarrow [(k', v')]$
+    -   reduce tasks process one key-list entry at a time, with a list of all values associated with that key
+    -   the result can be either piped to another task or emitted as the final output
+
+For the $\chi^2$ computation on our review dataset this would translate to the following steps:
+
+**Mapping:** Initially the data is spread across many storage nodes. The master process redistributes the data and assigns a map task to each node, which processes the data and emits intermediate key-value pairs. In our case this is where the preprocessing of the individual lines each containing a review and a category takes place. After preprocessing the text (tokenization, lowercasing, removing punctuation, stemming, etc.), we emit "messages" on 2 different "channels" to the reducer: one for the term-category pairs `((t, c), 1)` and one for the total number of documents / lines in each category `((none, c,) 1))`.
+
+**CSP style messaging:** The whole "channel" concept from the CSP concurrency model [^go] is a bit of a stretch here, but it's a good analogy to understand the concept. Essentially because there are more tokens than categories, we can't derive the number of categories from the number of tokens. We actually also need the number of lines / documents but fortunately since each line exactly corresponds to one category, we can use the number of lines as a proxy for the number of categories. But either way, a single emit instruction can't carry all the information we need.
+
+We therefore either have to run 2 separate MapReduce jobs - which is inefficient - or we can emit the term-category pairs and the category counts separately and then group them in the reducer. To do so we can make up a dummy key `(none, c)` that is easy to distinguish from `(t, c)`. This is analogous to the "channels" in the CSP model, where we can send messages on different channels to different processes and then merge them in a single process. Efficiency at the cost of complexity.
+
+**Combining:** To optimize network traffic, we can use a combinator function to merge the intermediate results on the same node as the map task. This way we can reduce the amount of data that needs to be transferred to the reducer. Given the high latency of network communication compared to local computation, this always results in a performance improvement. We do this by incrementing the value / counters `1` on each occurrence of a term/none-category pair to `n`. The combiner then passes these values forward to the same reducer by using the the dummy key `none` in all cases: `(none, (t|none, n))`.
+
+**Reducing:** In the reducer we then calculate the $\chi^2$ statistic for each term-category pair and output the results. First we derive the total number of documents from the number of categories. Then sum up the number of terms per category and the number of categories per term. Finally we calculate the $\chi^2$ statistic for each term-category pair and output the results.
+
+Because I wanted to emit the 75 highest $\chi^2$ values of terms per category before the dumping the entire dictionary I was bottlenecked from both sides: First because each chunk needed to be aware of the total number of documents and the number of categories and second because the reducer needed to keep track of the 75 highest values. This is why I decided to use a single reducer and a single mapper.
+
+It wasn't an issue because although I had to store a fraction of the _entire_ dataset in the memory of a single node, the dataset was small enough to fit into memory. This is a common tradeoff in distributed computing: you can either optimize for network traffic or for memory usage. In this case I optimized for memory usage. But in practice you would want to scale the number of your mappers and reducers according to the size of your dataset vs. the memory of your nodes.
+
+There is no one-size-fits-all solution to this problem. It depends on the size of your dataset, the memory of your nodes, the network speed, the number of nodes, the number of mappers and reducers, the complexity of your computation, and many other factors. This is why distributed computing is such a complex field. I wouldn't recommend using this code in production, but the hacky channel approach was a fun experiment.
 
 # Benchmarking
 
@@ -56,96 +88,20 @@ The results are as follows:
 
 So overall, despite this being a toy implementation in a prototyping language, the performance should suffice for small-scale testing.
 
-# –––––––––––––––––––––––––––––––––––––––––––––
+# Footnotes
 
-`<groupID>_DIC2024_Ex1.zip` must contain:
+Introduction to MapReduce:
 
--   `output.txt`: results obtained
--   `report.pdf`: written report
+-   https://www.dcs.bbk.ac.uk/~dell/teaching/cc/book/mmds/mmds_ch2_2.pdf
+-   https://www.semanticscholar.org/paper/Chapter-2.-Map-reduce-and-the-New-Software-Stack-to/78266ccf40d9e62ce0ea75568adf68175f3ac9c6
+-   http://infolab.stanford.edu/~ullman/mmds/ch2.pdf
+-   https://github.com/lintool/mapreducealgorithms
 
-    -   max 8 pdf pages of A4 size in total
-    -   section 1: introduction
-    -   section 2: problem overview
-    -   section 3: methodology and approach, must include a figure illustrating the strategy and pipeline in one figure must show the data flow clearly and indicate the chosen `<key,value>` design (all input, intermediary, and output pairs).
-    -   section 4: conclusions
+Concrete examples from the MRJob documentation:
 
--   `src/`: subdirectory with source code of MapReduce implementation + script to run all jobs in the correct order with all necessary parameters.
-
-# don't use inproduction
-
-## when does hadoop make sense?
-
-when working with big data you can't just load everything from storage into memory and process it. you have to split the data into chunks and process them in parallel. This is called data parallelism. Hadoop and MapReduce are examples of data parallelism.
-
-don't mistake them for task parallelism where you share compute.
-
-most hadoop tasks are IO bound, not CPU bound - they rarely utilize the CPU to its full potential.
-
-therefore the number of mappers and reducers you instantiate should be based on the number of cores you have, not the number of nodes.
-
-if you have too many reduce tasks (ie. don't use combiners to merge intermediate results) you will have a lot of network calls.
-
-network calls cause higher latency than disk IO.
-
-in fact, if you look at the history of computing, the latency of network has always progressed significantly slower than the latency of disk io. additionally if you have a lot of network calls, you will have a lot of network congestion.
-
-this is why RDMA and Infiniband are so important for big data. it's the greatest bottleneck.
-
-don't use Hadoop for small data. it's not worth it. use a database.
-
-ie. in this example were processing ~50GB of data from the amazon reviews dataset on a server with over ~100GB of RAM. we could have loaded the entire dataset into memory and processed it in a few seconds. but we're using Hadoop for the sake of learning.
-
-having said that - it also becomes clear why we have reduced the number of mappers and reducers to 1. we don't have enough data to justify more than 1 mapper and 1 reducer. but in a real world scenario, you would want to scale accordingly.
-
-## when does mrjob make sense?
-
-setting up hadoop is a pain. mrjob is a python library that abstracts away the complexity of hadoop and allows you to write mapreduce jobs in python.
-
-it doesn't require you to have hadoop installed. it can run on your local machine and you can pass the hadoop binary to it if you want to run it on a cluster.
-
-it's the convenience - but in production i suggest you use hadoop.
-
-# mapreduce
-
-mapreduce and the new software stack:
-
--   see: https://www.dcs.bbk.ac.uk/~dell/teaching/cc/book/mmds/mmds_ch2_2.pdf
--   see: https://www.semanticscholar.org/paper/Chapter-2.-Map-reduce-and-the-New-Software-Stack-to/78266ccf40d9e62ce0ea75568adf68175f3ac9c6
--   see: http://infolab.stanford.edu/~ullman/mmds/ch2.pdf
--   see: https://github.com/lintool/mapreducealgorithms
-
-mrjob docs for an example:
-
--   see: https://mrjob.readthedocs.io/en/latest/guides/writing-mrjobs.html
--   see: https://mrjob.readthedocs.io/en/latest/guides/writing-mrjobs.html#setup-and-teardown-of-tasks
-
-```python
-def mapper(self, _, line): # returns: (w, 1) of one input segment
-    for word in re.compile(r"[\w']+").findall(line):
-        yield word.lower(), 1
-
-def combiner(self, word, counts): # returns (w, num) of one input segment
-    yield word, sum(counts)
-
-def reducer(self, word, counts): # returns (w, num) of entire input
-    yield word, sum(counts)
-```
-
--   map:
-    -   `[(k, v)] -> [(k', v')]`
-    -   each map tasks receives one or more chunks of the distributed filesystem
-    -   they turn the chunks into key-value pairs
-    -   keys are ignored unless you're piping from another mapreduce set
-    -   keys don't have to be unique
--   group by keys
-    -   `[(k, v)] -> [(k', [v'])]`
-    -   the key-value paris are collected by master, then grouped if they have the same key
-    -   each list with the same key gets then sent to thne same process
--   reduce:
-    -   `[(k, [v])] -> [(k', v')]`
-    -   reduce tasks process one key-list entry at a time
-
----
+-   https://mrjob.readthedocs.io/en/latest/guides/writing-mrjobs.html
+-   https://mrjob.readthedocs.io/en/latest/guides/writing-mrjobs.html#setup-and-teardown-of-tasks
 
 [^chi]: https://web.pdx.edu/~newsomj/pa551/lectur11.htm
 [^amazon]: https://amazon-reviews-2023.github.io/
+[^go]: https://www.cs.princeton.edu/courses/archive/fall16/cos418/docs/P1-concurrency.pdf
