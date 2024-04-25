@@ -46,7 +46,7 @@ Additionally, we also require the number of lines / documents. But fortunately s
 
 Because I wanted to emit the 75 highest $\chi^2$ values of terms per category before the dumping the entire dictionary I was bottlenecked from both sides: First because each chunk needed to be aware of the total number of documents and the number of categories and second because the reducer needed to keep track of the 75 highest values. This is why I decided to use a single reducer and a single mapper.
 
-It wasn't an issue because although I had to store a fraction of the _entire_ dataset in the memory of a single node, the dataset was small enough to fit into memory. This is a common tradeoff in distributed computing: you can either optimize for network traffic or for memory usage. In this case I optimized for memory usage. But in practice you would want to scale the number of your mappers and reducers according to the size of your dataset vs. the memory of your nodes.
+It wasn't an issue, because although I had to store a fraction of the _entire_ dataset in the memory of a single node, the dataset was small enough to fit into memory. This is a common tradeoff in distributed computing: you can either optimize for network traffic or for memory usage. In this case I optimized for memory usage. But in practice you would want to scale the number of your mappers and reducers according to the size of your dataset vs. the memory of your nodes.
 
 There is no one-size-fits-all solution to this problem. It depends on the size of your dataset, the memory of your nodes, the network bandwidth, the number of nodes, the complexity of your specific computation etc.
 
