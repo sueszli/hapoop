@@ -59,7 +59,7 @@ I benchmarked the code both locally and on the Jupyter cluster at the HPC lab at
 
 The dataset processed is the Amazon Review Dataset (2014) [^Amazon], which contains 142.8 million reviews from 24 product categories and is 56GB in size. The dev dataset is a reduced (0.1%) sample of the full dataset and is included in the `data` directory. I used the reduced dataset for local testing and both the reduced and full datasets for cluster testing stored in HDFS.
 
-I ran each test 12 times using the `time` module in Python to exclude the time taken to start the Python interpreter and load the code and took the average of the 12 runs.
+I ran each test 12 times using the `time` module in Python to exclude the time taken to start the Python interpreter and load the code and took the average of all runs.
 
 The instructions for each run were as follows:
 
