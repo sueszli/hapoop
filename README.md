@@ -50,8 +50,6 @@ It wasn't an issue because although I had to store a fraction of the _entire_ da
 
 There is no one-size-fits-all solution to this problem. It depends on the size of your dataset, the memory of your nodes, the network bandwidth, the number of nodes, the complexity of your specific computation etc.
 
-So in conclusion: I wouldn't recommend using this code in production - But I encourage you to try implementing something similar yourself because of how rewarding it is.
-
 # Benchmarking
 
 I benchmarked the code both locally and on the Jupyter cluster at the HPC lab at TU Wien. The specs are as follows:
