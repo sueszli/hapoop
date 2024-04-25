@@ -15,10 +15,10 @@ $$
 where:
 
 -   $N$ = total number of retrieved documents (can be left out if you only care about ranking order, not scale)
--   $A$ = number of documents that are: in $c$, contain $t$
--   $B$ = number of documents that are: not in $c$, contain $t$
--   $C$ = number of documents that are: in $c$, don't contain $t$
--   $D$ = number of documents that are: not in $c$, don't contain $t$
+-   $A$ = number of documents that are: in $c$ and contain $t$
+-   $B$ = number of documents that are: not in $c$ and contain $t$
+-   $C$ = number of documents that are: in $c$ and don't contain $t$
+-   $D$ = number of documents that are: not in $c$ and don't contain $t$
 
 When computing this statistic, for datasets too large to fit into memory, we can use the MapReduce pattern to distribute the computation across multiple nodes.
 
