@@ -26,22 +26,11 @@ class ChiSquareJob(MRJob):
         self.add_file_arg("--stopwords", help="path to stopwords file")
 
     def init(self):
-        """load stopwords from file into memory.
-
-        :throws FileNotFoundError: if file not found
-        """
         self.stopwords = set()
         with open(self.options.stopwords, "r") as f:
             self.stopwords = set(line.strip() for line in f)
 
     def mapper(self, _: None, line: str):
-        """tokenize review-text, emit counts for each category and term-category pair.
-
-        :param _: None
-        :param line: json line from input file
-        :yield on channel-1: ((term, category), 1)
-        :yield on channel-2: ((None, category), 1)
-        """
         json_dict = json.loads(line)
         review_text = json_dict["reviewText"]
         category = json_dict["category"]
@@ -58,23 +47,9 @@ class ChiSquareJob(MRJob):
         yield (None, category), 1
 
     def combiner(self, key: tuple[Optional[str], str], counts: list[int]):
-        """sum intermediate counts to reduce network traffic. send to single reducer by emitting `None` key.
-
-        :param key: (term, category) or (None, category), from both channels
-        :param counts: list of counts
-        :yield on both channels: (key, sum(counts))
-        """
         yield None, (key, sum(counts))
 
     def reducer(self, _: None, key_count: list[tuple[tuple[Optional[str], str], int]]):
-        """aggregate messages from both channels, calculate chi2 for each term-category pair and yield results.
-
-        :param _: None, to receive from both channels
-        :param key_count: either [(term, category), count] or [(None, category), count]
-        :yield on channel-1: (None, f"{category} {term1}:{chi2} term2:{chi2} ... term75:{chi2}")
-        :yield on channel-2: (None, "term1 term2 ... termN")
-        :raises ZeroDivisionError: if denominator is zero
-        """
         N = 0
         cat_count = defaultdict(int)
         term_count = defaultdict(int)
